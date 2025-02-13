@@ -10,26 +10,48 @@ from .input_source_precessing import get_the_url, get_info_img
 
 # Create your views here.
 
-def get_histories(user_id) :
+@api_view(["GET"])
+def get_histories(request, user_id) :
     # 히스토리 불러오는 코드 부분, review app에 분리해야할 부분으로 생각되어짐, 일단 구현
     histories = History.objects.filter(user_id=user_id) \
         .select_related("problem_id") \
-        .values("id", "problem_id", "problem_id__name", "name", "created_at") \
+        .values("id", "problem_id", "problem_id__name", "name") \
         .order_by("-created_at")
 
 
-    print(histories)
-    problem_dict_history_list= {}
+    problem_set= set()
+    problem_dict= {}
+    problems= []
     for history in histories :
-    # 문제 아이디
-        problem_name= history["problem_id__name"]
-        if problem_name not in problem_dict_history_list :
-            problem_dict_history_list[problem_name]= [history]
+        # 문제 정보
+        problem_id= history["problem_id"]
+        problem_id__name= history["problem_id__name"]
+        # 히스토리 정보
+        name= history["name"]
+        history_id= history["id"]
+        # 이 주석 아래 부분에 problem_id__name부분을 problem_id로 수정하기
+        # 문제 정보 같은 게 있는지 확인
+        if problem_id in problem_set :
+            problem_row= problem_dict[problem_id]
+            problem_row['history_names'].append(name)
+            problem_row['history_ids'].append(history_id)
         else :
-            problem_dict_history_list[problem_name].append(history)
-              
-    print(problem_dict_history_list)
-    return problem_dict_history_list
+            problem_dict[problem_id]= {
+                "problem_id": problem_id,
+                "problem_name": problem_id__name,
+                "history_names": [name],
+                "history_ids": [history_id],
+            }
+            
+            problems.append(problem_dict[problem_id])
+    print({"problems": problems})
+    return Response(
+        {"problems": problems}, 
+        status=status.HTTP_200_OK,
+        )       
+            
+            
+            
   
 @api_view(["POST"])
 def generate_review(request):

@@ -40,11 +40,10 @@ def login(request):
     #user = get_user_model().objects.get(email=email)
     print(user, email, password)
     if user is not None:  # 인증이 성공했을 때
-      dataList= get_histories(user.id)
       return Response({
-        "message": "login success",
-        "user_id" : user.id,
-        "histories" : dataList,
-      }, status=status.HTTP_200_OK)
+                "message": "login success",
+                "user_id" : user.id,
+            }, 
+            status=status.HTTP_200_OK)
     else:
         return Response({"message": "Login Failed"}, status=status.HTTP_400_BAD_REQUEST)
