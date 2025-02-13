@@ -248,6 +248,8 @@ def generate_review(request):
         maybe_feedback.append(response)
 
 
+
+    cleaned_title_list = [title.strip("*") for title in title_list]
     # [피드백제목, 피드백 내용, 시작줄, 끝줄] 을 가지는 리스트를 만든다.
 
     # 최종 결과를 저장할 리스트
