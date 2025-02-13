@@ -49,6 +49,22 @@ def get_histories(request, user_id) :
         {"problems": problems}, 
         status=status.HTTP_200_OK,
         )       
+    
+
+@api_view(['GET'])
+def get_history(request, history_id) :
+    history= History.objects.filter(id=history_id).first()
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "comments", "start_line_number", "end_line_num")
+    return_data= {
+        "problem_info": history.problem_id,
+        "source_code": history.source_code,
+        "history_id": history.id,
+        "reviews": reviews,
+    }
+    return Response(
+        return_data,
+        status=status.HTTP_200_OK,
+    )
             
             
             
@@ -140,24 +156,11 @@ def generate_review(request):
         )
 
 # 히스토리 불러오기("GET"), 히스토리 이름 바꾸기("PUT"), 히스토리 삭제("DELETE")
-@api_view(["GET", "PUT", "DELETE"])
+@api_view(["PUT", "DELETE"])
 def handle_history(request, history_id) :
     # history_id로 객체 불러오기
-    history= History.objects.filter(id= history_id).first()
-    if request.method == "GET":
-        reviews= Review.objects.filter(history_id=history_id).values("id", "title", "comments", "start_line_number", "end_line_num")
-        return_data= {
-            "problem_info": history.problem_id,
-            "source_code": history.source_code,
-            "history_id": history.id,
-            "reviews": reviews,
-        }
-        return Response(
-            return_data,
-            status=status.HTTP_200_OK,
-        )
-    
-    elif request.method == "PUT" :
+    history= History.objects.filter(id= history_id).first()    
+    if request.method == "PUT" :
         new_name= request.data.get("new_name")
         history= History.objects.get(id=history_id)
         history.name= new_name
@@ -170,3 +173,8 @@ def handle_history(request, history_id) :
         return Response(status=status.HTTP_204_NO_CONTENT)
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+# problem에 대한 이름 수정 또는 삭제
+@api_view(["PUT", "DELETE"])
+def handle_problem(request, problem_id):
+    problem= Problem.objects.filter(id= problem_id).first()

@@ -1,6 +1,7 @@
 # web_req.py
 import requests
 from bs4 import BeautifulSoup as BS
+from .my_genai import Genai
 
 MAX_TRIES= 3
 
@@ -82,4 +83,5 @@ class NotSupportSite(Exception) :
     pass
 
 def get_info_img(image) :
+    genai= Genai()
     return {"status": False, "message": "아직 미구현"}

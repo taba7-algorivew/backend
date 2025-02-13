@@ -4,3 +4,4 @@ __pycache__/
 backend/venv/
 backend/.env
 frontend/node_modules
+review/my_genai.py
