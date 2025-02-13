@@ -7,6 +7,7 @@ from user_auth.models import AlgoReviewUser
 
 
 from .input_source_precessing import get_the_url, get_info_img
+from .my_bot import client
 
 # Create your views here.
 

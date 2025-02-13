@@ -5,3 +5,4 @@ backend/venv/
 backend/.env
 frontend/node_modules
 review/my_genai.py
+review/my_bot.py
