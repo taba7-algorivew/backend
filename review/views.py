@@ -74,7 +74,6 @@ def get_history(request, history_id) :
 def generate_review(request):
     # POST 데이터 처리
     data= request.data
-    print(data)
     problem_info = data["problem_info"]
     problem= None
     input_source= data["input_source"]
@@ -119,7 +118,7 @@ def generate_review(request):
     if problem_data["status"]:
         prob = f"{problem_data['title']}\n{problem_data['description']}"
     else:
-        prob = problem_data["message"]
+        raise AssertionError
     # code = source_code
 
     # 이전 코드 리뷰
@@ -157,7 +156,9 @@ def generate_review(request):
         "피드백 제목을 일반적인 키워드가 아니라, 개선해야 할 코드 동작 및 알고리즘 개념을 포함한 형태로 작성해야 한다.",
         "피드백 내용에는 논리적인 개선 이유를 포함해야 한다.",
         "각 피드백 항목을 번호 순서대로 나열하여 정리할 것.",
-
+        "반드시 모든 피드백과 제목은 한국어로 작성해야 한다.",
+        "영어 단어나 문장은 피드백 내용에 포함하지 말 것.",
+        "한국어로 자연스럽게 표현할 것. (예: 'Two Pointers' 대신 '투 포인터' 사용)",
     ]
 
     review_content = feedback_content
@@ -179,15 +180,19 @@ def generate_review(request):
     
     user_input = "< 문제 설명 >" + prob + "\n" + "<풀이 코드>" + source_code
     content_response = chat_with_gpt(user_input)
-
     import re
 
     # 정규식을 사용하여 항목 추출
-    matches = re.findall(r'\d+\.\s(.+?)\n\s+-\s(.+?)(?=\n\d+\.|\Z)', content_response, re.DOTALL)
+    print(f"{content_response=}")
+    #matches = re.findall(r'\d+\.\s(.+?)\n\s+-\s(.+?)(?=\n\d+\.|\Z)', content_response, re.DOTALL)
+    cleaned_content = re.sub(r'\s*\n\s*', '\n', content_response)  # 개행 전후 불필요한 공백 제거
+    cleaned_content = re.sub(r'\n-\s*', '\n- ', cleaned_content)  # `-` 앞뒤 공백 정리
 
+    matches = re.findall(r'\d+\.\s(.+?)\n-\s(.+?)(?=\n\d+\.|\Z)', cleaned_content, re.DOTALL)
+    print(f"{matches=}")
     # 리스트 변환
     result = [[title.strip(), content.strip()] for title, content in matches]
-
+    print(f"{result=}")
     # Content 부분 추출
     content_lines = content_response.split("\n")
 
@@ -224,7 +229,7 @@ def generate_review(request):
 
     # "gpt-3.5-turbo", "gpt-4o"
     def chat2_with_gpt(prompt):
-        response = response = client.chat.completions.create(
+        response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
     *[{"role": "system", "content": msg} for msg in algorithm_content],
@@ -243,8 +248,9 @@ def generate_review(request):
     maybe_feedback = list()
 
     for i in range(len(result)) :
-        user_input3 = "피드백 제목"+result[i][0] + "\n"+ "피드백 내용" + result[i][1] + "\n" + "문제" + prob + "\n" + "코드" + code
+        user_input3 = "피드백 제목"+result[i][0] + "\n"+ "피드백 내용" + result[i][1] + "\n" + "문제" + prob + "\n" + "코드" + source_code
         response = chat2_with_gpt(user_input3)
+        print(f"{response=}")
         maybe_feedback.append(response)
 
 
@@ -276,15 +282,27 @@ def generate_review(request):
     )
 
     return_data = {
-        "history_id": history_id,
-        "problem_info": problem_id,
+        "history_id": history.id,
+        "problem_info": problem.id,
         "reviews": []
     }
 
-# review_id는 1부터 시작하여 1씩 증가
-    for idx, review in enumerate(final_list, start=1):
+    # review_id는 1부터 시작하여 1씩 증가
+    print(final_list)
+    for review in final_list:
+        title= review[0]
+        comments= review[1]
+        start_line_number= review[2]
+        end_line_number = review[3]
+        review_row= Review.objects.create(
+            history_id= history,
+            title= title,
+            content= comments,
+            start_line= start_line_number,
+            end_line= end_line_number
+        )
         review_data = {
-            "review_id": idx,
+            "review_id": review_row.id,
             "title": review[0],
             "comments": review[1],
             "start_line_number": review[2],
@@ -292,37 +310,7 @@ def generate_review(request):
         }
         return_data["reviews"].append(review_data)
 
-    
-
-    '''
-    return_data= {
-        "history_id": history.id,
-        "problem_info": problem.id,
-        "reviews": [
-            {
-                "review_id": 1,
-                "title": "캐시 교체 알고리즘 오류",
-                "comments": "LRU 알고리즘을 올바르게 구현하려면, 가장 최근에 사용된 항목을 맨 뒤로 보내야 합니다.\n하지만 현재 코드에서는 기존 항목을 삭제하고 마지막에 추가하고 있습니다.",
-                "start_line_number": 3,
-                "end_line_number": 5
-            },
-            {
-                "review_id": 2,
-                "title": "대소문자 처리 누락",
-                "comments": "도시 이름을 비교하기 전에 소문자로 변환해야 합니다.\n그러나 현재 코드에서는 소문자로 변환된 도시 이름으로 비교하고 있습니다.",
-                "start_line_number": 8,
-                "end_line_number": 10
-            },
-            {
-                "review_id": 3,
-                "title": "초기 캐시가 비어있는 경우 처리",
-                "comments": "캐시가 비어있는 경우를 처리하지 않고 있습니다.\n초기 캐시가 비어있을 때의 조건을 추가하여 예외 사항을 고려하세요.",
-                "start_line_number": 12,
-                "end_line_number": 15
-            }
-  ]
-    }
-    '''
+    print(return_data)
     return Response(
         return_data, 
         status=status.HTTP_201_CREATED

@@ -1,21 +1,9 @@
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework.decorators import api_view
-from rest_framework_simplejwt.tokens import RefreshToken
-from review.views import get_histories
 
 User = get_user_model()
-
-class CustomTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        response.data['user'] = {
-            'email': self.user.email,
-            'password': self.user.password
-        }
-        return response
 
 @api_view(['POST'])
 def register(request):
