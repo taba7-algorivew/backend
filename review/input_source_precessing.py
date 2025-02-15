@@ -1,9 +1,14 @@
 # web_req.py
 import requests
 from bs4 import BeautifulSoup as BS
-from .my_genai import Genai
+import google.generativeai as genai
+import os
+import json
+from PIL import Image, UnidentifiedImageError
+import io
 
-MAX_TRIES= 3
+MAX_TRIES = 3    # MAX Request problem info
+API_KEY = os.getenv("GENAI_API_KEY")    # 환경변수 불러오기
 
 def get_the_url(url) :
     if 'programmers' in url :
@@ -23,6 +28,19 @@ def get_the_url(url) :
         }
     else :
         return {"status": False, "message": "문제 url을 확인해주세요."}
+    
+class ProblemResponse:
+    def __init__(self, status=False, title="", description=""):
+        self.status = status
+        self.title = title
+        self.description = description
+
+    def to_dict(self):
+        return {
+            "status": self.status,
+            "title": self.title,
+            "description": self.description
+        }
         
 class Manager :
     def __init__(self, url) :
@@ -82,6 +100,48 @@ class Acmicpc(Manager) :
 class NotSupportSite(Exception) :
     pass
 
-def get_info_img(image) :
-    genai= Genai()
-    return {"status": False, "message": "아직 미구현"}
+def fetch_problem_from_image(image):
+    """AI 모델을 호출하여 이미지에서 문제 정보를 생성하는 함수"""
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel("gemini-2.0-flash-lite-preview-02-05")
+
+    response = model.generate_content([
+        "이 이미지는 알고리즘 문제를 찾아내는 이미지입니다.",
+        "이미지에 있는 문제 정보를 추적해 답변해주세요.",
+        "입력 형식, 출력 형식, 예제는 모두 하나의 문제 정보로 취급하세요.",
+        "문제 정보를 추출할 때 적절하게 줄바꿈 표기를 해주세요",
+        "항상 다음과 같은 형식으로 JSON으로 출력을 보내주세요: { 'status': True, 'title': '문제 제목', 'description': '문제 설명' }",
+        "응답은 한국어로 해야 합니다.",
+        image  # 원본 이미지 전달
+    ])
+
+    return response.text if response.text else None
+
+def get_info_img(image_bytes):
+    """이미지에서 문제 정보를 분석하고 추출하는 함수"""
+    if not API_KEY:
+        return ProblemResponse(description="Missing API Key").to_dict()
+
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+    except UnidentifiedImageError:
+        return ProblemResponse(description="Invalid image").to_dict()
+    except Exception:
+        return ProblemResponse(description="Invalid image").to_dict()
+
+    # AI 모델 호출 및 응답 검증
+    for attempt in range(MAX_TRIES):
+        raw_text = fetch_problem_from_image(image)
+
+        if raw_text is None:
+            return ProblemResponse(description="API request failed").to_dict()
+
+        try:
+            problem_data = json.loads(raw_text)
+
+            if all(key in problem_data for key in ["status", "title", "description"]):
+                return problem_data
+        except json.JSONDecodeError:
+            pass
+
+    return ProblemResponse(description="Invalid API response after multiple attempts").to_dict()
