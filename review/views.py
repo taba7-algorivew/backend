@@ -137,6 +137,7 @@ def generate_review(request):
         source_code= source_code,
     )
 
+    # "problem_info" : prob
     return_data = {
         "history_id": history.id,
         "problem_info": problem.id,
@@ -165,8 +166,7 @@ def generate_review(request):
             "end_line_number": review[3]
         }
         return_data["reviews"].append(review_data)
-
-    print(return_data)
+    
     return Response(
         return_data, 
         status=status.HTTP_201_CREATED

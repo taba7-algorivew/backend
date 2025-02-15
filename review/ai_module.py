@@ -1,8 +1,10 @@
 from datetime import datetime
 import re
 from openai import OpenAI  # OpenAI 라이브러리가 필요하면 설치하세요: pip install openai
+import os
 
-client = OpenAI()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 ##############system_prompt##################
 
@@ -127,7 +129,7 @@ def chat_with_gpt(prompt, review_content):
     )
     return response.choices[0].message.content
 
-_
+
 def chat2_with_gpt(prompt, line_content):
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -146,7 +148,7 @@ def generate_review(prob,source_code) :
 
     user_input = f"<문제 설명> {prob}\n<풀이 코드> {source_code}"
 
-    content_response = chat_with_gpt(user_input, feedback_content)
+    content_response = chat_with_gpt(user_input, review_content)
 
     matches = re.findall(r'(\d+)\.\s*(.+?)\s*-\s*(.+?)(?=\n\d+\.|\Z)', content_response, re.DOTALL)
     result = [[title.strip(), content.strip()] for _, title, content in matches]
@@ -155,7 +157,8 @@ def generate_review(prob,source_code) :
 
 # "reviews"에서 [title,content]로 이루어진 리스트 previous_feedback
 def generate_re_review(prob,source_code) :
-    previous_feedback = []
+    
+    previous_feedback = [] # [[title1,content1],[title2,content2]]
 
     re_review_content = re_review_system_prompt()
 
@@ -194,10 +197,11 @@ def generate_ai_review(prob, source_code,problem_info) :
         if match:
             start_line, end_line, content = match.groups()
             final_list.append([title, content.strip(), int(start_line), int(end_line)])
+    
 
     return final_list
 
-#### 최종 코드 ##### 입력 방식 views.py에서 어디로 들어올껀지 입력 input 방식부터 알아야 사용할 수 있음.
+### 모범답안
 '''
 def code_system_prompt () :
     final_content = [
@@ -257,11 +261,11 @@ def generate_final_code(final_list,source_code,prob) :
 
     user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + source_code + "\n" + "<FINAL_LIST>" + final_feedback
     code_response = chat3_with_gpt(user_input3)
+    ## string ##
 
     return code_response
 
 '''
-
 
 
 
