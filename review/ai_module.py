@@ -7,7 +7,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 ##############system_prompt##################
-
 def review_system_prompt() :
     feedback_content = [
         "<문제 설명> 은 알고리즘 문제에 대한 정보입니다.",
@@ -97,7 +96,6 @@ def re_review_system_prompt() :
     return correct_content
 
 def lines_system_prompt() :
-
     algorithm_content = [
         "유저가 제공한 코드에 대해 개선이 필요한 부분을 피드백한다.",
         "각 피드백에는 반드시 해당 코드의 시작 줄과 끝 줄을 포함해야 한다.",
@@ -114,6 +112,21 @@ def lines_system_prompt() :
     ]
     return algorithm_content
 
+def chatbot_system_prompt() -> list:
+    """챗봇 시스템 프롬프트 반환"""
+    return [
+        {"role": "system", "content": "당신은 생성된 코드 리뷰 피드백 내용에 질문을 받는 AI입니다."},
+        {"role": "system", "content": "< 문제 설명 >은 알고리즘 문제에 대한 정보입니다."},
+        {"role": "system", "content": "< 풀이 코드 >은 알고리즘 풀이 코드에 대한 정보입니다."},
+        {"role": "system", "content": "< 피드백 주제 >은 GPT 모델에게 받은 피드백 주제에 대한 정보입니다."},
+        {"role": "system", "content": "< 피드백 내용 >은 피드백 주제에 대한 자세한 설명 정보입니다."},
+        {"role": "system", "content": "< 질문 >은 현재 사용자가 요구하는 문의사항 입니다. 이를 잘 파악하여 상세한 답변을 해야 합니다."},
+        {"role": "system", "content": "위 형식은 질문을 이해하기 위한 용도이며, 응답에서는 사용하지 않는다."},
+        {"role": "system", "content": "답변에 마크다운 표기 및 모든 특수기호 서식을 사용하지 않는다. (예: **Bold**, _Italic_, `Code Block` 등) 오직 일반 텍스트로 답변하며, 줄바꿈은 표기한다."},
+        {"role": "system", "content": "답변의 길이는 800 토큰으로 제한합니다."},
+        {"role": "system", "content": "한국어로 답해야 합니다."},
+        {"role": "system", "content": "교육적 어투로 답해야 합니다."}
+    ]
 
 
 ########################chatgpt_function########################################
@@ -171,8 +184,6 @@ def generate_re_review(prob,source_code) :
 
     return result
 
-
-
 # final_list = generate_ai_review(prob, source_code,problem_info)
 #########################Main Function###################################################
 def generate_ai_review(prob, source_code,problem_info) : 
@@ -200,6 +211,35 @@ def generate_ai_review(prob, source_code,problem_info) :
     
 
     return final_list
+
+def chatbot_service(request_data: dict) -> str:
+    messages = chatbot_system_prompt()    # 프롬프트 불러오기
+
+    # 기존 대화 이력 추가
+    for q, r in zip(request_data["questions"], request_data["answers"]):
+        messages.append({"role": "user", "content": q})
+        messages.append({"role": "assistant", "content": r})
+
+    # 새 질문 추가
+    messages.append({
+        "role": "user",
+        "content": (
+            f"< 문제 설명 >\n{request_data['problem_info']}\n\n"
+            f"< 풀이 코드 >\n{request_data['source_code']}\n\n"
+            f"< 피드백 주제 >\n{request_data['review_info']['title']}\n\n"
+            f"< 피드백 내용 >\n{request_data['review_info']['comments']}\n\n"
+            f"< 질문 >\n{request_data['questions'][-1]}\n\n"
+            "이 내용을 바탕으로 상세한 답변을 생성하세요."
+        )
+    })
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+        max_tokens=800
+    )
+
+    return response.choices[0].message.content
 
 ### 모범답안
 '''
@@ -266,7 +306,3 @@ def generate_final_code(final_list,source_code,prob) :
     return code_response
 
 '''
-
-
-
-
