@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from datetime import datetime
-from .models import History, Review, Problem
+from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
 
 
@@ -13,16 +13,17 @@ from .my_bot import client
 
 @api_view(["GET"])
 def get_histories(request, user_id) :
-    # 히스토리 불러오는 코드 부분, review app에 분리해야할 부분으로 생각되어짐, 일단 구현
-    histories = History.objects.filter(user_id=user_id) \
+    print("유저 아이디로 조회 들어옴")
+    # 유저의 삭제되지 않은 히스토리들 조회
+    histories = History.objects.filter(user_id=user_id, is_deleted=False) \
         .select_related("problem_id") \
         .values("id", "problem_id", "problem_id__name", "name") \
         .order_by("-created_at")
 
-
-    problem_set= set()
-    problem_dict= {}
-    problems= []
+    # 같은 문제 번호를 가진 데이터들을 뭉쳐두기
+    problem_set= set() # 이미 뭉쳐진 번호가 있는지 체크하기 위함
+    problem_dict= {} # 같은 문제 번호를 가진 히스토리를 뭉칠 곳
+    problems= [] # 최종적으로 리턴할 데이터
     for history in histories :
         # 문제 정보
         problem_id= history["problem_id"]
@@ -45,7 +46,7 @@ def get_histories(request, user_id) :
             }
             
             problems.append(problem_dict[problem_id])
-    print({"problems": problems})
+    #print({"problems": problems})
     return Response(
         {"problems": problems}, 
         status=status.HTTP_200_OK,
@@ -54,10 +55,14 @@ def get_histories(request, user_id) :
 
 @api_view(['GET'])
 def get_history(request, history_id) :
+    print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "comments", "start_line_number", "end_line_num")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    for review in reviews :
+        review["comments"] = review["content"]
+    problem= Problem.objects.filter(id=history.problem_id.id).first()
     return_data= {
-        "problem_info": history.problem_id,
+        "problem_info": problem.content,
         "source_code": history.source_code,
         "history_id": history.id,
         "reviews": reviews,
@@ -74,11 +79,12 @@ def get_history(request, history_id) :
 def generate_review(request):
     # POST 데이터 처리
     data= request.data
+    problem_id= data["problem_id"]
     problem_info = data["problem_info"]
-    problem= None
     input_source= data["input_source"]
     input_data= data["input_data"]
-    user_id= int(data["user_id"]["userId"])
+    #user_id= int(data["user_id"]["userId"])
+    user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
     
@@ -86,9 +92,9 @@ def generate_review(request):
     #                       URL 또는 이미지                      #
     #                         데이터 처리                        #
     #############################################################
+    problem= None
     # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
-    if not problem_info :
-        print("success?")
+    if not problem_id :
         # URL에 대한 처리
         if input_source == "url" :
             problem_data= get_the_url(input_data)
@@ -102,11 +108,11 @@ def generate_review(request):
             problem= Problem.objects.create(
                 name= name,
                 title= problem_data["title"],
-                content= problem_data["description"]
+                content= problem_data["content"]
             )
             
     else :
-        problem= Problem.objects.filter(id= problem_info)
+        problem= Problem.objects.filter(id= problem_id).first()
     
     # 히스토리 이름 기본값 생성
     now= datetime.now()
@@ -115,8 +121,8 @@ def generate_review(request):
     
     # 문제 정보와 소스코드로 API에게 리뷰 생성 요청
 
-    if problem_data["status"]:
-        prob = f"{problem_data['title']}\n{problem_data['description']}"
+    if problem is not None:
+        prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
     # code = source_code
@@ -189,10 +195,8 @@ def generate_review(request):
     cleaned_content = re.sub(r'\n-\s*', '\n- ', cleaned_content)  # `-` 앞뒤 공백 정리
 
     matches = re.findall(r'\d+\.\s(.+?)\n-\s(.+?)(?=\n\d+\.|\Z)', cleaned_content, re.DOTALL)
-    print(f"{matches=}")
     # 리스트 변환
     result = [[title.strip(), content.strip()] for title, content in matches]
-    print(f"{result=}")
     # Content 부분 추출
     content_lines = content_response.split("\n")
 
@@ -250,7 +254,6 @@ def generate_review(request):
     for i in range(len(result)) :
         user_input3 = "피드백 제목"+result[i][0] + "\n"+ "피드백 내용" + result[i][1] + "\n" + "문제" + prob + "\n" + "코드" + source_code
         response = chat2_with_gpt(user_input3)
-        print(f"{response=}")
         maybe_feedback.append(response)
 
 
@@ -283,12 +286,12 @@ def generate_review(request):
 
     return_data = {
         "history_id": history.id,
-        "problem_info": problem.id,
+        "problem_id": problem.id,
+        "problem_info": problem.content,
         "reviews": []
     }
 
     # review_id는 1부터 시작하여 1씩 증가
-    print(final_list)
     for review in final_list:
         title= review[0]
         comments= review[1]
@@ -298,8 +301,8 @@ def generate_review(request):
             history_id= history,
             title= title,
             content= comments,
-            start_line= start_line_number,
-            end_line= end_line_number
+            start_line_number= start_line_number,
+            end_line_number= end_line_number
         )
         review_data = {
             "review_id": review_row.id,
@@ -326,7 +329,7 @@ def handle_history(request, history_id) :
         history= History.objects.get(id=history_id)
         history.name= new_name
         history.save()
-        return Response({"name": new_name}, status=status.HTTP_200_OK,)
+        return Response(status=status.HTTP_200_OK,)
 
     elif request.method == "DELETE" :
         history.is_deleted= True
@@ -339,3 +342,42 @@ def handle_history(request, history_id) :
 @api_view(["PUT", "DELETE"])
 def handle_problem(request, problem_id):
     problem= Problem.objects.filter(id= problem_id).first()
+    
+    if request.method == "PUT" :
+        new_name= request.data.get("new_name")
+        problem.name= new_name
+        problem.save()
+        return Response(status=status.HTTP_200_OK)
+    
+    elif request.method == "DELETE" :
+        history= History.objects.filter(problem_id=problem).update(is_deleted=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    else :
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+# 모범 답안 조회
+@api_view(["GET"])
+def get_solution(request, history_id) :
+    solution= Solution.objects.filter(history_id=history_id).first()
+    return_data= {
+        "history_id": history_id,
+        "solution_code": solution.solution_code
+    }
+    return Response(return_data, status=status.HTTP_200_OK)
+
+# chatbot api
+@api_view(["POST"])
+def chatbot(request) :
+    data= request.data
+    answer= data["question"][-1]
+    # 임의의 대답을 생성하기 위한 가짜 코드
+    from random import random
+    rand_num= random()
+    if rand_num < 0.333333333333 :
+        answer= f"'{answer}' 라는 질문은.. 저도 궁금해요.."
+    elif rand_num < 0.66666666666666666 :
+        answer= f"혹시 제게 '{answer}' 라고 물어보셨나요?"
+    else :
+        answer= f"안들린다아아아 안들린다아아아 {answer} 안들린다아아아아"
+    return_data= {"response": answer}
+    return Response(return_data, status=status.HTTP_200_OK)
