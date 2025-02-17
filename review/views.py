@@ -58,7 +58,9 @@ def get_history(request, history_id) :
     print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "comments", "start_line_number", "end_line_num")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    for review in reviews :
+        review["comments"]= review["content"]
     return_data= {
         "problem_id": problem.id,
         "problem_info": problem.content,
@@ -111,8 +113,8 @@ def generate_review(request):
     else :
         problem= Problem.objects.filter(id= problem_id).first()
     
-    if problem_data["status"]:
-        prob = f"{problem_data['title']}\n{problem_data['description']}"
+    if problem is not None:
+        prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
     # code = source_code
@@ -154,7 +156,8 @@ def generate_review(request):
             end_line_number= end_line_number
         )
         review_data = {
-            "review_id": review_row.id,
+            #"review_id": review_row.id,
+            "id": review_row.id,
             "title": review[0],
             "comments": review[1],
             "start_line_number": review[2],
@@ -220,7 +223,8 @@ def get_solution(request, history_id) :
 @api_view(["POST"])
 def chatbot(request) :
     data= request.data
-    answer= data["question"][-1]
+    print(data)
+    answer= data["questions"][-1]
     # 임의의 대답을 생성하기 위한 가짜 코드
     from random import random
     rand_num= random()
