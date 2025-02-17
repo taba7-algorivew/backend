@@ -17,7 +17,7 @@ def hello_algoreview(request):
 def get_histories(request, user_id):
     print(f"/api/v1/user-histories - get_histories | user_id: {user_id}")
     
-    histories = History.objects.filter(user_id=user_id) \
+    histories = History.objects.filter(user_id=user_id, is_deleted=False) \
         .select_related("problem_id") \
         .values("id", "problem_id", "problem_id__name", "name") \
         .order_by("-created_at")
@@ -60,9 +60,12 @@ def get_histories(request, user_id):
 #[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
 def get_history(request, history_id) :
+    print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "comments", "start_line_number", "end_line_num")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    for review in reviews :
+        review["comments"]= review["content"]
     return_data= {
         "problem_id": problem.id,
         "problem_info": problem.content,
@@ -80,10 +83,11 @@ def get_history(request, history_id) :
 def generate_review(request):
     # POST 데이터 처리
     data= request.data
+    problem_id= data["problem_id"]
     problem_info = data["problem_info"]
-    problem= None
     input_source= data["input_source"]
     input_data= data["input_data"]
+    #user_id= int(data["user_id"]["userId"])
     user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
@@ -92,9 +96,9 @@ def generate_review(request):
     #                       URL 또는 이미지                      #
     #                         데이터 처리                        #
     #############################################################
+    problem= None
     # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
-    if not problem_info :
-        print("success?")
+    if not problem_id :
         # URL에 대한 처리
         if input_source == "url" :
             problem_data= get_the_url(input_data)
@@ -108,14 +112,14 @@ def generate_review(request):
             problem= Problem.objects.create(
                 name= name,
                 title= problem_data["title"],
-                content= problem_data["description"]
+                content= problem_data["content"]
             )
             
     else :
-        problem= Problem.objects.filter(id= problem_info)
+        problem= Problem.objects.filter(id= problem_id).first()
     
-    if problem_data["status"]:
-        prob = f"{problem_data['title']}\n{problem_data['description']}"
+    if problem is not None:
+        prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
     
@@ -154,11 +158,12 @@ def generate_review(request):
             history_id= history,
             title= title,
             content= comments,
-            start_line= start_line_number,
-            end_line= end_line_number
+            start_line_number= start_line_number,
+            end_line_number= end_line_number
         )
         review_data = {
-            "review_id": review_row.id,
+            #"review_id": review_row.id,
+            "id": review_row.id,
             "title": review[0],
             "comments": review[1],
             "start_line_number": review[2],
@@ -184,7 +189,7 @@ def handle_history(request, history_id) :
         history= History.objects.get(id=history_id)
         history.name= new_name
         history.save()
-        return Response({"name": new_name}, status=status.HTTP_200_OK,)
+        return Response(status=status.HTTP_200_OK,)
 
     elif request.method == "DELETE" :
         history.is_deleted= True
