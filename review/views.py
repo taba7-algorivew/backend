@@ -111,8 +111,10 @@ def generate_review(request):
         prob = f"{problem_data['title']}\n{problem_data['description']}"
     else:
         raise AssertionError
-    # code = source_code
     
+    #############################################################
+    #                        코드 리뷰 생성                      #
+    #############################################################
     reviews = data.get("reviews", [])
     final_list = generate_ai_review(prob, source_code, reviews)
 
