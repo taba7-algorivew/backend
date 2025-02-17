@@ -6,7 +6,6 @@ from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
 from .ai_module import generate_ai_review, generate_chatbot  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
-from .my_bot import client
 
 #[GET] /api/v1/user-histories/{user_id}
 @api_view(["GET"])
