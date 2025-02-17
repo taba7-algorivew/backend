@@ -14,44 +14,48 @@ def hello_algoreview(request):
 
 #[GET] /api/v1/user-histories/{user_id}
 @api_view(["GET"])
-def get_histories(request, user_id) :
-    # 히스토리 불러오는 코드 부분, review app에 분리해야할 부분으로 생각되어짐, 일단 구현
+def get_histories(request, user_id):
+    print(f"/api/v1/user-histories - get_histories | user_id: {user_id}")
+    
     histories = History.objects.filter(user_id=user_id) \
         .select_related("problem_id") \
         .values("id", "problem_id", "problem_id__name", "name") \
         .order_by("-created_at")
 
+    # 조회된 히스토리가 없을 경우 즉시 반환
+    if not histories.exists():
+        print(f"No history found for user_id: {user_id}")
+        return Response({"problems": []}, status=status.HTTP_200_OK)
+
+    print(f"Found {histories.count()} histories for user_id: {user_id}")
+
     # 같은 문제 번호를 가진 데이터들을 뭉쳐두기
-    problem_set= set() # 이미 뭉쳐진 번호가 있는지 체크하기 위함
-    problem_dict= {} # 같은 문제 번호를 가진 히스토리를 뭉칠 곳
-    problems= [] # 최종적으로 리턴할 데이터
-    for history in histories :
-        # 문제 정보
-        problem_id= history["problem_id"]
-        problem_id__name= history["problem_id__name"]
-        # 히스토리 정보
-        name= history["name"]
-        history_id= history["id"]
-        # 이 주석 아래 부분에 problem_id__name부분을 problem_id로 수정하기
-        # 문제 정보 같은 게 있는지 확인
-        if problem_id in problem_set :
-            problem_row= problem_dict[problem_id]
+    problem_set = set()
+    problem_dict = {}
+    problems = []
+
+    for history in histories:
+        problem_id = history["problem_id"]
+        problem_name = history["problem_id__name"]
+        name = history["name"]
+        history_id = history["id"]
+
+        if problem_id in problem_set:
+            problem_row = problem_dict[problem_id]
             problem_row['history_names'].append(name)
             problem_row['history_ids'].append(history_id)
-        else :
-            problem_dict[problem_id]= {
+        else:
+            problem_dict[problem_id] = {
                 "problem_id": problem_id,
-                "problem_name": problem_id__name,
+                "problem_name": problem_name,
                 "history_names": [name],
                 "history_ids": [history_id],
             }
-            
             problems.append(problem_dict[problem_id])
-    #print({"problems": problems})
-    return Response(
-        {"problems": problems}, 
-        status=status.HTTP_200_OK,
-        )
+            problem_set.add(problem_id)
+
+    print(f"Returning {len(problems)} problems")
+    return Response({"problems": problems}, status=status.HTTP_200_OK)
 
 #[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
