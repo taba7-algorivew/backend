@@ -11,4 +11,4 @@ urlpatterns = [
     path("solution/<int:history_id>", get_solution, name="get_solution"),
     path("history/<int:history_id>", handle_history, name="handle_history"),
     path("problem/<int:problem_id>", handle_problem, name="handle_problem"),
-]   
+]

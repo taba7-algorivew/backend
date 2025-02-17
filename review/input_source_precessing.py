@@ -24,7 +24,7 @@ def get_the_url(url) :
         return {
             "status" : True, 
             "title": crawler.title, 
-            "description": crawler.description,
+            "content": crawler.content,
         }
     else :
         return {"status": False, "message": "문제 url을 확인해주세요."}
@@ -83,7 +83,7 @@ class Programmers(Manager) :
         super().__init__(url)
         
     def find_problem_data(self) :
-        self.description= self.page.find(id="tour2").find("div", {"class": "markdown"}).text
+        self.content= self.page.find(id="tour2").find("div", {"class": "markdown"}).text
         self.title= self.page.find("span", {"class": "challenge-title"}).text
             
 
@@ -92,7 +92,7 @@ class Acmicpc(Manager) :
         super().__init__(url)
         
     def find_problem_data(self) :
-        self.description= self.page.find(id="problem-body").text
+        self.content= self.page.find(id="problem-body").text
         self.title= self.page.find(id="problem_title").text
         
         

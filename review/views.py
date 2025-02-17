@@ -14,51 +14,58 @@ def hello_algoreview(request):
 
 #[GET] /api/v1/user-histories/{user_id}
 @api_view(["GET"])
-def get_histories(request, user_id) :
-    # 히스토리 불러오는 코드 부분, review app에 분리해야할 부분으로 생각되어짐, 일단 구현
-    histories = History.objects.filter(user_id=user_id) \
+def get_histories(request, user_id):
+    print(f"/api/v1/user-histories - get_histories | user_id: {user_id}")
+    
+    histories = History.objects.filter(user_id=user_id, is_deleted=False) \
         .select_related("problem_id") \
         .values("id", "problem_id", "problem_id__name", "name") \
         .order_by("-created_at")
 
+    # 조회된 히스토리가 없을 경우 즉시 반환
+    if not histories.exists():
+        print(f"No history found for user_id: {user_id}")
+        return Response({"problems": []}, status=status.HTTP_200_OK)
+
+    print(f"Found {histories.count()} histories for user_id: {user_id}")
+
     # 같은 문제 번호를 가진 데이터들을 뭉쳐두기
-    problem_set= set() # 이미 뭉쳐진 번호가 있는지 체크하기 위함
-    problem_dict= {} # 같은 문제 번호를 가진 히스토리를 뭉칠 곳
-    problems= [] # 최종적으로 리턴할 데이터
-    for history in histories :
-        # 문제 정보
-        problem_id= history["problem_id"]
-        problem_id__name= history["problem_id__name"]
-        # 히스토리 정보
-        name= history["name"]
-        history_id= history["id"]
-        # 이 주석 아래 부분에 problem_id__name부분을 problem_id로 수정하기
-        # 문제 정보 같은 게 있는지 확인
-        if problem_id in problem_set :
-            problem_row= problem_dict[problem_id]
+    problem_set = set()
+    problem_dict = {}
+    problems = []
+
+    for history in histories:
+        problem_id = history["problem_id"]
+        problem_name = history["problem_id__name"]
+        name = history["name"]
+        history_id = history["id"]
+
+        if problem_id in problem_set:
+            problem_row = problem_dict[problem_id]
             problem_row['history_names'].append(name)
             problem_row['history_ids'].append(history_id)
-        else :
-            problem_dict[problem_id]= {
+        else:
+            problem_dict[problem_id] = {
                 "problem_id": problem_id,
-                "problem_name": problem_id__name,
+                "problem_name": problem_name,
                 "history_names": [name],
                 "history_ids": [history_id],
             }
-            
             problems.append(problem_dict[problem_id])
-    #print({"problems": problems})
-    return Response(
-        {"problems": problems}, 
-        status=status.HTTP_200_OK,
-        )
+            problem_set.add(problem_id)
+
+    print(f"Returning {len(problems)} problems")
+    return Response({"problems": problems}, status=status.HTTP_200_OK)
 
 #[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
 def get_history(request, history_id) :
+    print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "comments", "start_line_number", "end_line_num")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    for review in reviews :
+        review["comments"]= review["content"]
     return_data= {
         "problem_id": problem.id,
         "problem_info": problem.content,
@@ -76,10 +83,11 @@ def get_history(request, history_id) :
 def generate_review(request):
     # POST 데이터 처리
     data= request.data
+    problem_id= data["problem_id"]
     problem_info = data["problem_info"]
-    problem= None
     input_source= data["input_source"]
     input_data= data["input_data"]
+    #user_id= int(data["user_id"]["userId"])
     user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
@@ -88,9 +96,9 @@ def generate_review(request):
     #                       URL 또는 이미지                      #
     #                         데이터 처리                        #
     #############################################################
+    problem= None
     # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
-    if not problem_info :
-        print("success?")
+    if not problem_id :
         # URL에 대한 처리
         if input_source == "url" :
             problem_data= get_the_url(input_data)
@@ -104,14 +112,14 @@ def generate_review(request):
             problem= Problem.objects.create(
                 name= name,
                 title= problem_data["title"],
-                content= problem_data["description"]
+                content= problem_data["content"]
             )
             
     else :
-        problem= Problem.objects.filter(id= problem_info)
+        problem= Problem.objects.filter(id= problem_id).first()
     
-    if problem_data["status"]:
-        prob = f"{problem_data['title']}\n{problem_data['description']}"
+    if problem is not None:
+        prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
     
@@ -150,11 +158,12 @@ def generate_review(request):
             history_id= history,
             title= title,
             content= comments,
-            start_line= start_line_number,
-            end_line= end_line_number
+            start_line_number= start_line_number,
+            end_line_number= end_line_number
         )
         review_data = {
-            "review_id": review_row.id,
+            #"review_id": review_row.id,
+            "id": review_row.id,
             "title": review[0],
             "comments": review[1],
             "start_line_number": review[2],
@@ -180,7 +189,7 @@ def handle_history(request, history_id) :
         history= History.objects.get(id=history_id)
         history.name= new_name
         history.save()
-        return Response({"name": new_name}, status=status.HTTP_200_OK,)
+        return Response(status=status.HTTP_200_OK,)
 
     elif request.method == "DELETE" :
         history.is_deleted= True

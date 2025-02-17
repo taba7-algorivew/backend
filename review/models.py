@@ -21,8 +21,8 @@ class Review(models.Model) :
     history_id= models.ForeignKey(History, on_delete=models.CASCADE)
     title= models.CharField(max_length=50)
     content= models.TextField()
-    start_line= models.SmallIntegerField()
-    end_line= models.SmallIntegerField()
+    start_line_number= models.SmallIntegerField()
+    end_line_number= models.SmallIntegerField()
 
 class Solution(models.Model) :
     history_id= models.ForeignKey(History, on_delete=models.CASCADE)
