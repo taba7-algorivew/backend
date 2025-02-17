@@ -169,9 +169,11 @@ def generate_review(prob,source_code) :
     return result
 
 # "reviews"에서 [title,content]로 이루어진 리스트 previous_feedback
-def generate_re_review(prob,source_code) :
-    
-    previous_feedback = [] # [[title1,content1],[title2,content2]]
+def generate_re_review(prob,source_code,reviews) :
+
+
+    previous_list = [(review["title"], review["comments"]) for review in reviews]
+    previous_feedback = f'"""\n{json.dumps(previous_list, indent=4, ensure_ascii=False)}\n"""'
 
     re_review_content = re_review_system_prompt()
 
@@ -183,16 +185,16 @@ def generate_re_review(prob,source_code) :
     result = [[title.strip(), content.strip()] for _, title, content in matches]
 
     return result
-
 # final_list = generate_ai_review(prob, source_code,problem_info)
+
 #########################Main Function###################################################
-def generate_ai_review(prob, source_code,problem_info) : 
+def generate_ai_review(prob : str, source_code : str, reviews : list) : 
     
-    if problem_info :
+    if reviews :
         result = generate_review(prob,source_code)
     else :
-        print("hello")
-        generate_re_review(prob,source_code)  ## reviews 도 들어가야함.    
+
+        generate_re_review(prob,source_code,reviews)     
     
     maybe_feedback = []
     line_content = lines_system_prompt()
