@@ -1,4 +1,5 @@
 from django.urls import path
+<<<<<<< HEAD
 from .views import (
     chatbot,
     generate_review,
@@ -8,8 +9,12 @@ from .views import (
     handle_history, 
     handle_problem,
 )
+=======
+from .views import generate_review, handle_history, get_histories, get_history, chatbot, get_solution, handle_problem, hello_algoreview
+>>>>>>> fca48db7f648bf174e130e96df3a1a98440e57fa
 
 urlpatterns = [
+    path("api", hello_algoreview, name="hello_algoreview"),
     path("chatbot", chatbot, name="chatbot"),
     path("review", generate_review, name="generate_review"),
     path("user-histories/<int:user_id>", get_histories, name="get_histories"),

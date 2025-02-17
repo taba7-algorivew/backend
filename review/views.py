@@ -4,55 +4,60 @@ from rest_framework.response import Response
 from datetime import datetime
 from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
-from .ai_module import generate_ai_review  # ai_module에서 함수 불러오기
-
+from .ai_module import generate_ai_review, generate_chatbot  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
-from .my_bot import client
 
-# Create your views here.
-
+#[GET] /api/v1/api : 디버깅용 주소
 @api_view(["GET"])
-def get_histories(request, user_id) :
-    print("유저 아이디로 조회 들어옴")
-    # 유저의 삭제되지 않은 히스토리들 조회
+def hello_algoreview(request):
+    return Response({"message": "Hello, Algo-Reviews!!!"}, status=status.HTTP_200_OK)
+
+#[GET] /api/v1/user-histories/{user_id}
+@api_view(["GET"])
+def get_histories(request, user_id):
+    print(f"/api/v1/user-histories - get_histories | user_id: {user_id}")
+    
     histories = History.objects.filter(user_id=user_id, is_deleted=False) \
         .select_related("problem_id") \
         .values("id", "problem_id", "problem_id__name", "name") \
         .order_by("-created_at")
 
+    # 조회된 히스토리가 없을 경우 즉시 반환
+    if not histories.exists():
+        print(f"No history found for user_id: {user_id}")
+        return Response({"problems": []}, status=status.HTTP_200_OK)
+
+    print(f"Found {histories.count()} histories for user_id: {user_id}")
+
     # 같은 문제 번호를 가진 데이터들을 뭉쳐두기
-    problem_set= set() # 이미 뭉쳐진 번호가 있는지 체크하기 위함
-    problem_dict= {} # 같은 문제 번호를 가진 히스토리를 뭉칠 곳
-    problems= [] # 최종적으로 리턴할 데이터
-    for history in histories :
-        # 문제 정보
-        problem_id= history["problem_id"]
-        problem_id__name= history["problem_id__name"]
-        # 히스토리 정보
-        name= history["name"]
-        history_id= history["id"]
-        # 이 주석 아래 부분에 problem_id__name부분을 problem_id로 수정하기
-        # 문제 정보 같은 게 있는지 확인
-        if problem_id in problem_set :
-            problem_row= problem_dict[problem_id]
+    problem_set = set()
+    problem_dict = {}
+    problems = []
+
+    for history in histories:
+        problem_id = history["problem_id"]
+        problem_name = history["problem_id__name"]
+        name = history["name"]
+        history_id = history["id"]
+
+        if problem_id in problem_set:
+            problem_row = problem_dict[problem_id]
             problem_row['history_names'].append(name)
             problem_row['history_ids'].append(history_id)
-        else :
-            problem_dict[problem_id]= {
+        else:
+            problem_dict[problem_id] = {
                 "problem_id": problem_id,
-                "problem_name": problem_id__name,
+                "problem_name": problem_name,
                 "history_names": [name],
                 "history_ids": [history_id],
             }
-            
             problems.append(problem_dict[problem_id])
-    #print({"problems": problems})
-    return Response(
-        {"problems": problems}, 
-        status=status.HTTP_200_OK,
-        )       
-    
+            problem_set.add(problem_id)
 
+    print(f"Returning {len(problems)} problems")
+    return Response({"problems": problems}, status=status.HTTP_200_OK)
+
+#[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
 def get_history(request, history_id) :
     print("히스토리 아이디로 조회들어옴")
@@ -71,9 +76,9 @@ def get_history(request, history_id) :
     return Response(
         return_data,
         status=status.HTTP_200_OK,
-    )  
-            
-  
+    )
+
+#[POST] /api/v1/review
 @api_view(["POST"])
 def generate_review(request):
     # POST 데이터 처리
@@ -82,7 +87,10 @@ def generate_review(request):
     problem_info = data["problem_info"]
     input_source= data["input_source"]
     input_data= data["input_data"]
+<<<<<<< HEAD
     #user_id= int(data["user_id"]["userId"])
+=======
+>>>>>>> fca48db7f648bf174e130e96df3a1a98440e57fa
     user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
@@ -117,11 +125,12 @@ def generate_review(request):
         prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
-    # code = source_code
     
-    #########################################################
-    final_list = generate_ai_review(prob, source_code,problem_info)
-    #########################################################
+    #############################################################
+    #                        코드 리뷰 생성                      #
+    #############################################################
+    reviews = data.get("reviews", [])
+    final_list = generate_ai_review(prob, source_code, reviews)
 
     # reviews= get_review(**params)
     # 히스토리 생성
@@ -173,7 +182,7 @@ def generate_review(request):
         status=status.HTTP_201_CREATED
         )
 
-# 히스토리 불러오기("GET"), 히스토리 이름 바꾸기("PUT"), 히스토리 삭제("DELETE")
+# [PUT], [DELETE] /api/v1/history/{history_id}
 @api_view(["PUT", "DELETE"])
 def handle_history(request, history_id) :
     # history_id로 객체 불러오기
@@ -192,7 +201,7 @@ def handle_history(request, history_id) :
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-# problem에 대한 이름 수정 또는 삭제
+# [PUT], [DELETE] /api/v1/problem/{problem_id}
 @api_view(["PUT", "DELETE"])
 def handle_problem(request, problem_id):
     problem= Problem.objects.filter(id= problem_id).first()
@@ -209,7 +218,7 @@ def handle_problem(request, problem_id):
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-# 모범 답안 조회
+# [GET] /api/v1/solution/{history_id}
 @api_view(["GET"])
 def get_solution(request, history_id) :
     solution= Solution.objects.filter(history_id=history_id).first()
@@ -219,9 +228,10 @@ def get_solution(request, history_id) :
     }
     return Response(return_data, status=status.HTTP_200_OK)
 
-# chatbot api
+# [POST] /api/v1/chatbot
 @api_view(["POST"])
 def chatbot(request) :
+<<<<<<< HEAD
     data= request.data
     print(data)
     answer= data["questions"][-1]
@@ -236,3 +246,14 @@ def chatbot(request) :
         answer= f"안들린다아아아 안들린다아아아 {answer} 안들린다아아아아"
     return_data= {"response": answer}
     return Response(return_data, status=status.HTTP_200_OK)
+=======
+    try:
+        data = request.data
+        answer = generate_chatbot(data)  # 챗봇 응답 생성
+        return Response({"response": answer}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": f"Internal Server Error: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+>>>>>>> fca48db7f648bf174e130e96df3a1a98440e57fa
