@@ -5,7 +5,6 @@ from datetime import datetime
 from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
 from .ai_module import generate_ai_review  # ai_module에서 함수 불러오기
-
 from .input_source_precessing import get_the_url, get_info_img
 from .my_bot import client
 
@@ -114,9 +113,8 @@ def generate_review(request):
         raise AssertionError
     # code = source_code
     
-    #########################################################
-    final_list = generate_ai_review(prob, source_code,problem_info)
-    #########################################################
+    reviews = data.get("reviews", [])
+    final_list = generate_ai_review(prob, source_code, reviews)
 
     # reviews= get_review(**params)
     # 히스토리 생성
