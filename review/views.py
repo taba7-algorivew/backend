@@ -7,6 +7,11 @@ from user_auth.models import AlgoReviewUser
 from .ai_module import generate_ai_review, generate_chatbot  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
 
+#[GET] /api/v1/api : 디버깅용 주소
+@api_view(["GET"])
+def hello_algoreview(request):
+    return Response({"message": "Hello, Algo-Reviews!!!"}, status=status.HTTP_200_OK)
+
 #[GET] /api/v1/user-histories/{user_id}
 @api_view(["GET"])
 def get_histories(request, user_id) :
@@ -75,7 +80,7 @@ def generate_review(request):
     problem= None
     input_source= data["input_source"]
     input_data= data["input_data"]
-    user_id= int(data["user_id"]["userId"])
+    user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
     
