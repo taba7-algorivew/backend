@@ -1,11 +1,14 @@
 from datetime import datetime
 import re
-from openai import OpenAI  # OpenAI 라이브러리가 필요하면 설치하세요: pip install openai
+import openai
 import os
 import json
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
+if not OPENAI_API_KEY:
+    raise ValueError("Missing OPENAI_API_KEY environment variable.")
+
+client = openai.Client(api_key=OPENAI_API_KEY)
 
 ##############system_prompt##################
 def review_system_prompt() :
@@ -325,13 +328,17 @@ def generate_chatbot(request_data: dict) -> str:
         )
     })
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        max_tokens=800
-    )
-
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=800
+        )
+        return response.choices[0].message["content"]
+    except openai.OpenAIError as e:
+        return f"OpenAI API Error: {str(e)}"
+    except Exception as e:
+        return f"Internal Server Error: {str(e)}"
 
 ### 모범답안
 '''

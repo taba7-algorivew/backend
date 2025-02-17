@@ -4,12 +4,10 @@ from rest_framework.response import Response
 from datetime import datetime
 from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
-from .ai_module import generate_ai_review  # ai_module에서 함수 불러오기
+from .ai_module import generate_ai_review, generate_chatbot  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
-from .my_bot import client
 
-# Create your views here.
-
+#[GET] /api/v1/user-histories/{user_id}
 @api_view(["GET"])
 def get_histories(request, user_id) :
     # 히스토리 불러오는 코드 부분, review app에 분리해야할 부분으로 생각되어짐, 일단 구현
@@ -48,9 +46,9 @@ def get_histories(request, user_id) :
     return Response(
         {"problems": problems}, 
         status=status.HTTP_200_OK,
-        )       
-    
+        )
 
+#[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
 def get_history(request, history_id) :
     history= History.objects.filter(id=history_id).first()
@@ -66,9 +64,9 @@ def get_history(request, history_id) :
     return Response(
         return_data,
         status=status.HTTP_200_OK,
-    )  
-            
-  
+    )
+
+#[POST] /api/v1/review
 @api_view(["POST"])
 def generate_review(request):
     # POST 데이터 처리
@@ -167,7 +165,7 @@ def generate_review(request):
         status=status.HTTP_201_CREATED
         )
 
-# 히스토리 불러오기("GET"), 히스토리 이름 바꾸기("PUT"), 히스토리 삭제("DELETE")
+# [PUT], [DELETE] /api/v1/history/{history_id}
 @api_view(["PUT", "DELETE"])
 def handle_history(request, history_id) :
     # history_id로 객체 불러오기
@@ -186,7 +184,7 @@ def handle_history(request, history_id) :
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-# problem에 대한 이름 수정 또는 삭제
+# [PUT], [DELETE] /api/v1/problem/{problem_id}
 @api_view(["PUT", "DELETE"])
 def handle_problem(request, problem_id):
     problem= Problem.objects.filter(id= problem_id).first()
@@ -203,7 +201,7 @@ def handle_problem(request, problem_id):
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-# 모범 답안 조회
+# [GET] /api/v1/solution/{history_id}
 @api_view(["GET"])
 def get_solution(request, history_id) :
     solution= Solution.objects.filter(history_id=history_id).first()
@@ -213,19 +211,15 @@ def get_solution(request, history_id) :
     }
     return Response(return_data, status=status.HTTP_200_OK)
 
-# chatbot api
+# [POST] /api/v1/chatbot
 @api_view(["POST"])
 def chatbot(request) :
-    data= request.data
-    answer= data["question"][-1]
-    # 임의의 대답을 생성하기 위한 가짜 코드
-    from random import random
-    rand_num= random()
-    if rand_num < 0.333333333333 :
-        answer= f"'{answer}' 라는 질문은.. 저도 궁금해요.."
-    elif rand_num < 0.66666666666666666 :
-        answer= f"혹시 제게 '{answer}' 라고 물어보셨나요?"
-    else :
-        answer= f"안들린다아아아 안들린다아아아 {answer} 안들린다아아아아"
-    return_data= {"response": answer}
-    return Response(return_data, status=status.HTTP_200_OK)
+    try:
+        data = request.data
+        answer = generate_chatbot(data)  # 챗봇 응답 생성
+        return Response({"response": answer}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": f"Internal Server Error: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
