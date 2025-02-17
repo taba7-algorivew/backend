@@ -287,8 +287,11 @@ def generate_ai_review(prob : str, source_code : str, reviews : list) :
     if reviews :
         result = generate_review(prob,source_code)
     else :
-        generate_re_review(prob,source_code,reviews)     
-    
+        result = generate_re_review(prob,source_code,reviews)
+
+    if result is None:
+        result = []     
+
     maybe_feedback = []
     line_content = lines_system_prompt()
     
