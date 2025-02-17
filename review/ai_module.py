@@ -2,6 +2,7 @@ from datetime import datetime
 import re
 from openai import OpenAI  # OpenAI 라이브러리가 필요하면 설치하세요: pip install openai
 import os
+import json
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)

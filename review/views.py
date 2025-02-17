@@ -123,9 +123,9 @@ def generate_review(request):
         raise AssertionError
     
     # "reviews" 리스트만 추출
-    
+    reviews = data.get("reviews", [])
     #########################################################
-    final_list = generate_ai_review(prob, source_code,data["reviews"])
+    final_list = generate_ai_review(prob, source_code, reviews)
     #########################################################
 
     # reviews= get_review(**params)
