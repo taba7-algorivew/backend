@@ -80,7 +80,7 @@ def generate_review(request):
     problem= None
     input_source= data["input_source"]
     input_data= data["input_data"]
-    user_id= int(data["user_id"]["userId"])
+    user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
     
