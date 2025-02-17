@@ -87,10 +87,7 @@ def generate_review(request):
     problem_info = data["problem_info"]
     input_source= data["input_source"]
     input_data= data["input_data"]
-<<<<<<< HEAD
     #user_id= int(data["user_id"]["userId"])
-=======
->>>>>>> fca48db7f648bf174e130e96df3a1a98440e57fa
     user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
@@ -231,22 +228,6 @@ def get_solution(request, history_id) :
 # [POST] /api/v1/chatbot
 @api_view(["POST"])
 def chatbot(request) :
-<<<<<<< HEAD
-    data= request.data
-    print(data)
-    answer= data["questions"][-1]
-    # 임의의 대답을 생성하기 위한 가짜 코드
-    from random import random
-    rand_num= random()
-    if rand_num < 0.333333333333 :
-        answer= f"'{answer}' 라는 질문은.. 저도 궁금해요.."
-    elif rand_num < 0.66666666666666666 :
-        answer= f"혹시 제게 '{answer}' 라고 물어보셨나요?"
-    else :
-        answer= f"안들린다아아아 안들린다아아아 {answer} 안들린다아아아아"
-    return_data= {"response": answer}
-    return Response(return_data, status=status.HTTP_200_OK)
-=======
     try:
         data = request.data
         answer = generate_chatbot(data)  # 챗봇 응답 생성
@@ -256,4 +237,3 @@ def chatbot(request) :
             {"error": f"Internal Server Error: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
->>>>>>> fca48db7f648bf174e130e96df3a1a98440e57fa

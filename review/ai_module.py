@@ -287,17 +287,11 @@ def generate_ai_review(prob : str, source_code : str, reviews : list) :
     if reviews :
         result = generate_review(prob,source_code)
     else :
-<<<<<<< HEAD
-        print("hello")
-        result=generate_re_review(prob,source_code)  ## reviews 도 들어가야함.    
-    
-=======
         result = generate_re_review(prob,source_code,reviews)
 
     if result is None:
         result = []     
 
->>>>>>> fca48db7f648bf174e130e96df3a1a98440e57fa
     maybe_feedback = []
     line_content = lines_system_prompt()
     
