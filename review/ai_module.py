@@ -192,7 +192,7 @@ def generate_ai_review(prob, source_code,problem_info) :
         result = generate_review(prob,source_code)
     else :
         print("hello")
-        generate_re_review(prob,source_code)  ## reviews 도 들어가야함.    
+        result=generate_re_review(prob,source_code)  ## reviews 도 들어가야함.    
     
     maybe_feedback = []
     line_content = lines_system_prompt()
