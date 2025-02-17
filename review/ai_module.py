@@ -328,14 +328,12 @@ def generate_ai_review(prob : str, source_code : str, reviews : list) :
     return final_list
 
 def generate_chatbot(request_data: dict) -> str:
-    messages = chatbot_system_prompt()    # 프롬프트 불러오기
+    messages = chatbot_system_prompt()
 
-    # 기존 대화 이력 추가
     for q, r in zip(request_data["questions"], request_data["answers"]):
         messages.append({"role": "user", "content": q})
         messages.append({"role": "assistant", "content": r})
 
-    # 새 질문 추가
     messages.append({
         "role": "user",
         "content": (
@@ -354,10 +352,20 @@ def generate_chatbot(request_data: dict) -> str:
             messages=messages,
             max_tokens=800
         )
-        return response.choices[0].message["content"]
+
+        # ✅ 수정된 부분: ["content"] 대신 .content 속성 사용
+        chatbot_response = response.choices[0].message.content  
+
+        if not chatbot_response:
+            print("⚠️ OpenAI 응답이 비어 있음!")
+            return "죄송합니다. 현재 답변을 생성할 수 없습니다."
+
+        return chatbot_response
     except openai.OpenAIError as e:
+        print(f"OpenAI API Error: {str(e)}")
         return f"OpenAI API Error: {str(e)}"
     except Exception as e:
+        print(f"Internal Server Error: {str(e)}")
         return f"Internal Server Error: {str(e)}"
 
 ### 모범답안
