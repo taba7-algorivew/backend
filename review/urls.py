@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import generate_review, handle_history, get_histories, get_history
+from .views import generate_review, handle_history, get_histories, get_history, chatbot
 
 urlpatterns = [
     path("chatbot", chatbot, name="chatbot"),
