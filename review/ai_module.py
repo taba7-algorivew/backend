@@ -212,7 +212,7 @@ def generate_ai_review(prob, source_code,problem_info) :
 
     return final_list
 
-def chatbot_service(request_data: dict) -> str:
+def generate_chatbot(request_data: dict) -> str:
     messages = chatbot_system_prompt()    # 프롬프트 불러오기
 
     # 기존 대화 이력 추가
