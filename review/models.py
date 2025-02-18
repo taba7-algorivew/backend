@@ -23,6 +23,7 @@ class Review(models.Model) :
     content= models.TextField()
     start_line_number= models.SmallIntegerField()
     end_line_number= models.SmallIntegerField()
+    is_passed= models.BooleanField(default=False) # 기본값은 통과하지 못했다는 뜻으로 False
 
 class Solution(models.Model) :
     history_id= models.ForeignKey(History, on_delete=models.CASCADE)
