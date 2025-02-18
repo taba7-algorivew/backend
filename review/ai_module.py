@@ -447,15 +447,16 @@ def chat3_with_gpt(prompt,solution_prompt):
 # 테스트 실행
 
 
-def generate_solution_code(problem_info : str , source_code : str, reviews : list) -> string :
+def generate_solution_code(problem_info : str , source_code : str, reviews : list) -> str :
 
     final_list = [(review["title"], review["comments"],review["start_line"],review["end_line"]) for review in reviews]
     final_feedback = f'"""{json.dumps(final_list)}"""'
 
+    prob = problem_info
+
     solution_prompt = solution_system_prompt ()
     user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + source_code + "\n" + "<FINAL_LIST>" + final_feedback
     code_response = chat3_with_gpt(user_input3,solution_system_prompt)
-    ## string ##
 
     return code_response
 
