@@ -465,7 +465,7 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
 
     solution_prompt = solution_system_prompt ()
     user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + source_code + "\n" + "<FINAL_LIST>" + final_feedback
-    code_response = chat3_with_gpt(user_input3,solution_system_prompt)
+    code_response = chat3_with_gpt(user_input3,solution_prompt)
 
     return code_response
 
