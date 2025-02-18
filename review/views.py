@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from datetime import datetime
 from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
-from .ai_module import generate_ai_review, generate_chatbot  # ai_module에서 함수 불러오기
+from .ai_module import generate_ai_review, generate_chatbot, generate_solution_code  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
+from django.shortcuts import get_object_or_404
 
 #[GET] /api/v1/api : 디버깅용 주소
 @api_view(["GET"])
@@ -63,7 +64,7 @@ def get_history(request, history_id) :
     print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number", "is_passed")
     for review in reviews :
         review["comments"]= review["content"]
     return_data= {
@@ -81,8 +82,11 @@ def get_history(request, history_id) :
 #[POST] /api/v1/review
 @api_view(["POST"])
 def generate_review(request):
+    print("[시작] 코드 리뷰 생성 API 호출")
     # POST 데이터 처리
     data= request.data
+    print(f"[데이터 수신] 요청 데이터: {data}")
+    
     problem_id= data["problem_id"]
     problem_info = data["problem_info"]
     input_source= data["input_source"]
@@ -96,6 +100,7 @@ def generate_review(request):
     #                       URL 또는 이미지                      #
     #                         데이터 처리                        #
     #############################################################
+    print("[문제 생성] 문제 데이터베이스에 새 문제 저장")
     problem= None
     # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
     if not problem_id :
@@ -122,12 +127,15 @@ def generate_review(request):
         prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
-    
+    print("[문제 정보 생성] 완료!!!")
+
     #############################################################
     #                        코드 리뷰 생성                      #
     #############################################################
+    print("[AI 리뷰 생성] AI 기반 코드 리뷰 생성 시작")
     reviews = data.get("reviews", [])
     final_list = generate_ai_review(prob, source_code, reviews)
+    print(f"[AI 리뷰 완료] 생성된 리뷰 개수: {len(final_list)}")
 
     # reviews= get_review(**params)
     # 히스토리 생성
@@ -154,12 +162,14 @@ def generate_review(request):
         comments= review[1]
         start_line_number= review[2]
         end_line_number = review[3]
+        is_passed = review[4]
         review_row= Review.objects.create(
             history_id= history,
             title= title,
             content= comments,
             start_line_number= start_line_number,
-            end_line_number= end_line_number
+            end_line_number= end_line_number,
+            is_passed = is_passed
         )
         review_data = {
             #"review_id": review_row.id,
@@ -167,17 +177,17 @@ def generate_review(request):
             "title": review[0],
             "comments": review[1],
             "start_line_number": review[2],
-            "end_line_number": review[3]
+            "end_line_number": review[3],
+            "is_passed": review[4]
         }
         return_data["reviews"].append(review_data)
         # 히스토리 이름 지정
         history.name= return_data["reviews"][0]["title"] #리뷰의 첫번째 타이틀
         history.save()
         return_data["history_name"]= history.name
-    return Response(
-        return_data, 
-        status=status.HTTP_201_CREATED
-        )
+
+    print("[완료] 코드 리뷰 생성 API 종료")
+    return Response(return_data, status=status.HTTP_201_CREATED)
 
 # [PUT], [DELETE] /api/v1/history/{history_id}
 @api_view(["PUT", "DELETE"])
@@ -215,15 +225,50 @@ def handle_problem(request, problem_id):
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-# [GET] /api/v1/solution/{history_id}
+# [GET] /api/v1/solution/{problem_id}
 @api_view(["GET"])
-def get_solution(request, history_id) :
-    solution= Solution.objects.filter(history_id=history_id).first()
-    return_data= {
-        "history_id": history_id,
+def get_solution(request, problem_id):
+    # problem_id에 해당하는 Solution 조회 (없을 경우 None 반환)
+    solution = Solution.objects.filter(problem_id=problem_id).first()
+
+    # Solution이 존재하지 않을 경우 기본 메시지 반환
+    solution_code = solution.solution_code if solution else "모범 답안 생성 없이 문제를 모두 해결하셨습니다! 훌륭합니다!"
+
+    # 응답 데이터 구성
+    return_data = {
+        "problem_id": problem_id,
+        "solution_code": solution_code
+    }
+
+    return Response(return_data, status=status.HTTP_200_OK)
+
+# [POST] /api/v1/solution/{problem_id}
+@api_view(["POST"])
+def create_solution(request, problem_id):
+    # 요청 데이터에서 필드 추출
+    problem_info = request.data.get("problem_info")
+    source_code = request.data.get("source_code")
+    reviews = request.data.get("reviews", [])
+
+    # 문제 존재 여부 검증 (get_object_or_404 없으면 에러 발생)
+    problem = get_object_or_404(Problem, id=problem_id)
+    
+    # AI 모듈에서 Solution 생성
+    solution_code = generate_solution_code(problem_info, source_code, reviews)
+
+    # Solution 모델에 저장
+    solution = Solution.objects.create(
+        problem_id=problem,
+        solution_code=solution_code
+    )
+
+    # 응답 데이터 구성
+    return_data = {
+        "is_created": True,
         "solution_code": solution.solution_code
     }
-    return Response(return_data, status=status.HTTP_200_OK)
+
+    return Response(return_data, status=status.HTTP_201_CREATED)
 
 # [POST] /api/v1/chatbot
 @api_view(["POST"])
