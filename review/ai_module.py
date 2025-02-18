@@ -87,57 +87,16 @@ def review_system_prompt() :
 
 def re_review_system_prompt() :
     correct_content = [
-        "당신은 알고리즘 코드 리뷰를 제공하는 AI입니다.",
-        "사용자가 제공한 코드(<풀이 코드>)가 주어진 문제(<문제 설명>)를 정확하게 해결하는지 평가하고, 최적화 및 가독성 개선을 위한 피드백을 제공합니다.",
-
-        "## 리뷰 방식:",
-        "1. **정확성 검토**",
-        "   - <풀이 코드>가 <문제 설명>을 올바르게 해결하는지 확인합니다.",
-        "   - 논리적 오류, 알고리즘의 적절성, 예외 처리 부족 여부 등을 분석합니다.",
-
-        "2. **최적화**",
-        "   - 코드의 성능을 향상시킬 수 있는 방법을 제안합니다.",
-        "   - 시간 복잡도 및 공간 복잡도를 고려한 개선 방법을 설명합니다.",
-
-        "3. **가독성 개선**",
-        "   - 코드의 유지보수성을 높일 수 있도록 제안합니다.",
-        "   - 변수명, 함수명, 주석, 코드 구조 등에 대한 개선점을 제공합니다.",
-
-        "4. **기존 피드백 반영**",
-        "   - <previous_feedback>을 참고하여, **기존 피드백이 해결된 경우 해당 피드백을 출력하지 않도록** 합니다.",
-        "   - 해결된 피드백에 대해 '이 피드백은 해결되었습니다'라는 문구를 출력하지 말고, **출력 자체에서 제거해야 합니다.**",
-        "   - 기존 피드백이 해결되었는지를 코드 변경 사항을 기반으로 자동으로 확인하고, 해결된 피드백은 최종 출력에서 **삭제**해야 합니다.",
-        "   - 기존 피드백에서 해결되지 않은 부분이 있으면 이를 보완하고 새로운 피드백을 제시해야 합니다.",
-        "   - **기존 피드백이 해결되었을 경우, 이를 새로운 피드백으로 변형하지 않고 리뷰에서 삭제해야 합니다.**",
-
-        "## 출력 형식",
-        "반드시 아래와 같은 형식으로 리뷰를 작성합니다.",
-        "불필요한 추가 설명을 포함하지 말고, **명확한 제목과 논리적인 개선 방향**을 제공합니다.",
-
-        """
-        <Title> 피드백의 핵심 요약을 한 줄로 작성합니다.</Title>
-
-        <Content>
-        1. 피드백 제목
-        - 피드백 내용 상세 설명
-
-        2. 피드백 제목
-        - 피드백 내용 상세 설명
-
-        3. 피드백 제목
-        - 피드백 내용 상세 설명
-        </Content>
-        """,
-
-        "## 출력 형식 규칙",
-        "- 각 피드백 제목에는 **핵심적인 알고리즘 개념 및 자료구조적인 내용을 포함**해야 합니다.",
-        "- 단순히 **'오답 발생'** 같은 표현 대신, **'BFS 탐색 조건 오류로 인해 그래프 판별 실패'**처럼 구체적으로 작성합니다.",
-        "- 기존 피드백(<previous_feedback>)을 먼저 반영한 후, **새로운 피드백을 추가**하여 정리합니다.",
-        "- 기존 피드백이 해결되었을 경우, 해당 피드백은 최종 출력에서 **완전히 삭제해야 합니다.**",
-        "- **불필요한 결론 요약 문구(예: '최종적으로,' '결론적으로,' '따라서' 등)를 생성하지 말고, 피드백 항목만 출력해야 합니다.**",
-        "- **출력 맨 마지막에 '이전 피드백에서 제안된 내용이 이미 ~~' 같은 최종적인 요약을 하지 않도록 합니다.**",
-        "- **피드백 항목 외에는 어떠한 문장도 출력하지 말고, 오직 피드백 목록만 유지해야 합니다.**",
-        "- 해결된 피드백을 제거하고 새로운 피드백을 추가할 때, **출력 형식의 일관성을 유지**해야 합니다."
+        "문제 설명은 prob이며, 재풀이 코드(source_code)는 새롭게 제출된 풀이 코드입니다. Previous Feedback은 [<피드백 제목>, <피드백 내용>]의 리스트로 나열되었습니다.",
+        "새로운 피드백을 생성하지 않으며, 이전 피드백이 완수되었는지를 평가합니다.",
+        "완수된 경우 해당 피드백을 제외하며, 미완수된 경우 <피드백 제목>은 유지하되, <피드백 내용>에 현재 풀이 코드에서 어떤 부분이 부족한지를 설명합니다.",
+        "평가 결과를 다음 형식으로 제공합니다.",
+        '"""',
+        "<title><피드백 제목></title>",
+        "<content><피드백 내용></content>",
+        "<status>pass 또는 fail</status>",
+        '"""',
+        "문제를 성공한 경우 <status>pass</status>, 실패한 경우 <status>fail</status>를 출력합니다."
     ]
     return correct_content
 
@@ -231,7 +190,52 @@ def chatbot_system_prompt() -> list:
         {"role": "system", "content": "한국어로 답해야 합니다."},
         {"role": "system", "content": "교육적 어투로 답해야 합니다."}
     ]
+########################parse,re_Final_function#############################################
+def parse_response_with_lines(response):
+    matches = re.finditer(r'<title>(.*?)</title>\s*<content>(.*?)</content>\s*<status>(pass|fail)</status>', response, re.DOTALL)
+    
+    lines_list = []
+    total_list = []
+    
+    for match in matches:
+        title = match.group(1).strip()
+        content = match.group(2).strip()
+        status = match.group(3).strip().lower()
+        
+        status_flag = True if status == 'pass' else False
+        start_line = 0  # 실제 라인 번호를 찾는 로직이 필요하면 추가 가능
+        end_line = 0    # 실제 라인 번호를 찾는 로직이 필요하면 추가 가능
+        
+        total_list.append([title, content, start_line, end_line, status_flag])
+        
+        if not status_flag:
+            lines_list.append([title, content])
+    
+    return lines_list, total_list
 
+def create_final_list(total_list, fail_feedback):
+    final_list = []
+    feedback_data = {}
+    
+    for feedback in fail_feedback:
+        match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)\s*(.*?)$', feedback, re.DOTALL | re.MULTILINE)
+        if match:
+            title = match.group(1).strip()
+            start_line = int(match.group(2))
+            end_line = int(match.group(3))
+            content = match.group(4).strip()
+            feedback_data[title] = (content, start_line, end_line)
+    
+    for item in total_list:
+        title, content, start_line, end_line, status = item
+        
+        if title in feedback_data and not status:  # fail인 경우 업데이트
+            new_content, new_start, new_end = feedback_data[title]
+            final_list.append([title, new_content, new_start, new_end, status])
+        else:
+            final_list.append(item)
+    
+    return final_list
 
 ########################chatgpt_function########################################
 
@@ -258,7 +262,9 @@ def chat2_with_gpt(prompt, line_content):
     )
     return response.choices[0].message.content
 
-#########################review, re_review function ############################################3
+
+
+########################review, re_review function #########################################
 
 def generate_review(prob,source_code) :
     review_content = review_system_prompt()
@@ -269,38 +275,6 @@ def generate_review(prob,source_code) :
 
     matches = re.findall(r'(\d+)\.\s*(.+?)\s*-\s*(.+?)(?=\n\d+\.|\Z)', content_response, re.DOTALL)
     result = [[title.strip(), content.strip()] for _, title, content in matches]
-
-    return result
-
-# "reviews"에서 [title,content]로 이루어진 리스트 previous_feedback
-def generate_re_review(prob,source_code,reviews) :
-
-
-    previous_list = [(review["title"], review["comments"]) for review in reviews]
-    previous_feedback = f'"""\n{json.dumps(previous_list, indent=4, ensure_ascii=False)}\n"""'
-
-    re_review_content = re_review_system_prompt()
-
-    user_input2 = f"<문제 설명> {prob}\n<풀이 코드> {source_code}\n<previous_feedback>{previous_feedback}"
-
-    re_content_response = chat_with_gpt(user_input2,re_review_content)
-
-    matches = re.findall(r'(\d+)\.\s*(.+?)\s*-\s*(.+?)(?=\n\d+\.|\Z)', re_content_response, re.DOTALL)
-    result = [[title.strip(), content.strip()] for _, title, content in matches]
-
-    return result
-# final_list = generate_ai_review(prob, source_code,problem_info)
-
-#########################Main Function###################################################
-def generate_ai_review(prob : str, source_code : str, reviews : list) : 
-    
-    if reviews :
-        result = generate_review(prob,source_code)
-    else :
-        result = generate_re_review(prob,source_code,reviews)
-
-    if result is None:
-        result = []     
 
     maybe_feedback = []
     line_content = lines_system_prompt()
@@ -322,10 +296,58 @@ def generate_ai_review(prob : str, source_code : str, reviews : list) :
         match = re.search(r"\((\d+),\s*(\d+)\)\s*(.*)", feedback, re.DOTALL)
         if match:
             start_line, end_line, content = match.groups()
-            final_list.append([title, content.strip(), int(start_line), int(end_line)])
+            final_list.append([title, content.strip(), int(start_line), int(end_line),False])
+
+    return final_list
+
+# "reviews"에서 [title,content]로 이루어진 리스트 previous_feedback
+def generate_re_review(prob,source_code,reviews) :
+
+
+    previous_list = [(review["title"], review["comments"]) for review in reviews]
+    previous_feedback = f'"""\n{json.dumps(previous_list, indent=4, ensure_ascii=False)}\n"""'
+
+    re_review_content = re_review_system_prompt()
+
+    user_input2 = f"<문제 설명> {prob}\n<풀이 코드> {source_code}\n<previous_feedback>{previous_feedback}"
+
+    re_content_response = chat_with_gpt(user_input2,re_review_content)
+
+    lines_list, total_list = parse_response_with_lines(re_content_response)
+
+    fail_feedback = list()
+    line_content = lines_system_prompt()
+    caution = """
+    ✅ 주의 사항:
+        - 반드시 하나의 (시작 줄, 끝 줄) 개선 사항만 출력해야 합니다.
+        - 만약 여러 개의 가능성이 있는 경우, 가장 핵심적인 한 가지를 GPT가 선택하여 출력해야 합니다.
+        - 여러 개의 (시작 줄, 끝 줄) 개선 사항을 나열하지 말고, 오직 하나만 출력하세요.
+    """
+    for i in range(len(lines_list)) :
+        user_input4 = "<피드백 제목>"+lines_list[i][0] + "\n"+ "<피드백 내용>" + lines_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + source_code + "\n" + caution
+        response = chat2_with_gpt(user_input4, line_content)
+        fail_feedback.append(response)
+
+
+    final_list = create_final_list(total_list, fail_feedback)
+
     
 
     return final_list
+# final_list = generate_ai_review(prob, source_code,problem_info)
+
+#########################Main Function###################################################
+def generate_ai_review(prob : str, source_code : str, reviews : list) : 
+    
+    if reviews :
+        result = generate_review(prob,source_code)
+    else :
+        result = generate_re_review(prob,source_code,reviews)
+
+    if result is None:
+        result = []     
+
+    return result
 
 def generate_chatbot(request_data: dict) -> str:
     messages = chatbot_system_prompt()    # 프롬프트 불러오기
