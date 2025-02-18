@@ -391,8 +391,8 @@ def generate_chatbot(request_data: dict) -> str:
         return f"Internal Server Error: {str(e)}"
 
 ### 모범답안
-'''
-def code_system_prompt () :
+
+def solution_system_prompt () :
     final_content = [
         "당신은 코드 개선을 전문으로 하는 AI 엔지니어입니다.",
         "사용자가 제공한 코드(<code>)는 <prob>을 해결하기 위해 작성된 풀이 코드입니다.",
@@ -427,11 +427,11 @@ def code_system_prompt () :
 
     return final_content
 
-def chat3_with_gpt(prompt):
+def chat3_with_gpt(prompt,solution_prompt):
     response = response = client.chat.completions.create(
     model="gpt-4o",
     messages=[
-   *[{"role": "system", "content": msg} for msg in final_content],
+   *[{"role": "system", "content": msg} for msg in solution_prompt],
         {
         "role": "user",
         "content": prompt
@@ -445,13 +445,19 @@ def chat3_with_gpt(prompt):
 
 
 # 테스트 실행
-def generate_final_code(final_list,source_code,prob) :
+
+
+def generate_solution_code(problem_info : str , source_code : str, reviews : list) -> str :
+
+    final_list = [(review["title"], review["comments"],review["start_line"],review["end_line"]) for review in reviews]
     final_feedback = f'"""{json.dumps(final_list)}"""'
 
+    prob = problem_info
+
+    solution_prompt = solution_system_prompt ()
     user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + source_code + "\n" + "<FINAL_LIST>" + final_feedback
-    code_response = chat3_with_gpt(user_input3)
-    ## string ##
+    code_response = chat3_with_gpt(user_input3,solution_system_prompt)
 
     return code_response
 
-'''
+
