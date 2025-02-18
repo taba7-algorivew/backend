@@ -340,9 +340,9 @@ def generate_re_review(prob,source_code,reviews) :
 def generate_ai_review(prob : str, source_code : str, reviews : list) : 
     
     if reviews :
-        result = generate_review(prob,source_code)
-    else :
         result = generate_re_review(prob,source_code,reviews)
+    else :
+        result = generate_review(prob,source_code)
 
     if result is None:
         result = []     
