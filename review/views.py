@@ -64,7 +64,7 @@ def get_history(request, history_id) :
     print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number", "is_passed")
     for review in reviews :
         review["comments"]= review["content"]
     return_data= {
