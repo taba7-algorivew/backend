@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from datetime import datetime
 from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
-from .ai_module import generate_ai_review, generate_chatbot  # ai_module에서 함수 불러오기
+from .ai_module import generate_ai_review, generate_chatbot, generate_final_code  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
+from django.shortcuts import get_object_or_404
 
 #[GET] /api/v1/api : 디버깅용 주소
 @api_view(["GET"])
@@ -215,15 +216,50 @@ def handle_problem(request, problem_id):
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
-# [GET] /api/v1/solution/{history_id}
+# [GET] /api/v1/solution/{problem_id}
 @api_view(["GET"])
-def get_solution(request, history_id) :
-    solution= Solution.objects.filter(history_id=history_id).first()
-    return_data= {
-        "history_id": history_id,
+def get_solution(request, problem_id):
+    # problem_id에 해당하는 Solution 조회 (없을 경우 None 반환)
+    solution = Solution.objects.filter(problem_id=problem_id).first()
+
+    # Solution이 존재하지 않을 경우 기본 메시지 반환
+    solution_code = solution.solution_code if solution else "모범 답안 생성 없이 문제를 모두 해결하셨습니다! 훌륭합니다!"
+
+    # 응답 데이터 구성
+    return_data = {
+        "problem_id": problem_id,
+        "solution_code": solution_code
+    }
+
+    return Response(return_data, status=status.HTTP_200_OK)
+
+# [POST] /api/v1/solution/{problem_id}
+@api_view(["POST"])
+def create_solution(request, problem_id):
+    # 요청 데이터에서 필드 추출
+    problem_info = request.data.get("problem_info")
+    source_code = request.data.get("source_code")
+    reviews = request.data.get("reviews", [])
+
+    # 문제 존재 여부 검증 (get_object_or_404 없으면 에러 발생)
+    problem = get_object_or_404(Problem, id=problem_id)
+    
+    # AI 모듈에서 Solution 생성
+    solution_code = generate_final_code(problem_info, source_code, reviews)
+
+    # Solution 모델에 저장
+    solution = Solution.objects.create(
+        problem_id=problem,
+        solution_code=solution_code
+    )
+
+    # 응답 데이터 구성
+    return_data = {
+        "is_created": True,
         "solution_code": solution.solution_code
     }
-    return Response(return_data, status=status.HTTP_200_OK)
+
+    return Response(return_data, status=status.HTTP_201_CREATED)
 
 # [POST] /api/v1/chatbot
 @api_view(["POST"])
