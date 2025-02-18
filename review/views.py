@@ -64,7 +64,7 @@ def get_history(request, history_id) :
     print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number")
+    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number", "is_passed")
     for review in reviews :
         review["comments"]= review["content"]
     return_data= {
@@ -155,12 +155,14 @@ def generate_review(request):
         comments= review[1]
         start_line_number= review[2]
         end_line_number = review[3]
+        is_passed = review[4]
         review_row= Review.objects.create(
             history_id= history,
             title= title,
             content= comments,
             start_line_number= start_line_number,
-            end_line_number= end_line_number
+            end_line_number= end_line_number,
+            is_passed = is_passed
         )
         review_data = {
             #"review_id": review_row.id,
@@ -168,7 +170,8 @@ def generate_review(request):
             "title": review[0],
             "comments": review[1],
             "start_line_number": review[2],
-            "end_line_number": review[3]
+            "end_line_number": review[3],
+            "is_passed": review[4]
         }
         return_data["reviews"].append(review_data)
         # 히스토리 이름 지정
