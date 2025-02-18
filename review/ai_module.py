@@ -267,57 +267,48 @@ def chat2_with_gpt(prompt, line_content):
 ########################review, re_review function #########################################
 
 def generate_review(prob,source_code) :
-    try :
-        review_content = review_system_prompt()
+    review_content = review_system_prompt()
 
-        user_input = f"<문제 설명> {prob}\n<풀이 코드> {source_code}"
+    user_input = f"<문제 설명> {prob}\n<풀이 코드> {source_code}"
 
-        content_response = chat_with_gpt(user_input, review_content)
-
-        if not content_response:
-            raise ValueError("GPT 응답이 비어 있습니다.")
+    content_response = chat_with_gpt(user_input, review_content)
 
         # 정규 표현식을 사용하여 <Content>와 <Detail> 태그 안의 내용을 추출
-        contents = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
-        details = re.findall(r'<Detail>(.*?)</Detail>', content_response, re.DOTALL)
+    contents = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
+    details = re.findall(r'<Detail>(.*?)</Detail>', content_response, re.DOTALL)
 
-        # [[<Content>, <Detail>], [<Content>, <Detail>], ...] 형태로 리스트 생성
-        result = [[content.strip(), detail.strip()] for content, detail in zip(contents, details)]
+    # [[<Content>, <Detail>], [<Content>, <Detail>], ...] 형태로 리스트 생성
+    result = [[content.strip(), detail.strip()] for content, detail in zip(contents, details)]
 
-        # 각 번호별 내용을 저장할 리스트
-        title_list = []
+    # 각 번호별 내용을 저장할 리스트
+    title_list = []
 
-        title_list = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
+    title_list = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
 
-        maybe_feedback = []
-        line_content = lines_system_prompt()
+    maybe_feedback = []
+    line_content = lines_system_prompt()
 
-        caution = """
-    ✅ caution :
-        - 반드시 하나의 (시작 줄, 끝 줄) 개선 사항만 출력해야 합니다.
-        - 만약 여러 개의 가능성이 있는 경우, 가장 핵심적인 한 가지를 GPT가 선택하여 출력해야 합니다.
-        - 여러 개의 (시작 줄, 끝 줄) 개선 사항을 나열하지 말고, 오직 하나만 출력하세요.
-    """
+    caution = """
+✅ caution :
+    - 반드시 하나의 (시작 줄, 끝 줄) 개선 사항만 출력해야 합니다.
+    - 만약 여러 개의 가능성이 있는 경우, 가장 핵심적인 한 가지를 GPT가 선택하여 출력해야 합니다.
+    - 여러 개의 (시작 줄, 끝 줄) 개선 사항을 나열하지 말고, 오직 하나만 출력하세요.
+"""
         
-        for title, content in result:
-            user_input3 = f"<피드백 제목> {title}\n<피드백 내용> {content}\n<문제설명> {prob}\n<풀이코드> {source_code}\n <caution> {caution}"
-            response = chat2_with_gpt(user_input3, line_content)
-            maybe_feedback.append(response)
+    for title, content in result:
+        user_input3 = f"<피드백 제목> {title}\n<피드백 내용> {content}\n<문제설명> {prob}\n<풀이코드> {source_code}\n <caution> {caution}"
+        response = chat2_with_gpt(user_input3, line_content)
+        maybe_feedback.append(response)
 
-        final_list = []
-        for (title, feedback) in zip([t.strip("*") for t, _ in result], maybe_feedback):
-            match = re.search(r"\((\d+),\s*(\d+)\)\s*(.*)", feedback, re.DOTALL)
-            if match:
-                start_line, end_line, content = match.groups()
-                final_list.append([title, content.strip(), int(start_line), int(end_line),False])
+    final_list = []
+    for (title, feedback) in zip([t.strip("*") for t, _ in result], maybe_feedback):
+        match = re.search(r"\((\d+),\s*(\d+)\)\s*(.*)", feedback, re.DOTALL)
+        if match:
+            start_line, end_line, content = match.groups()
+            final_list.append([title, content.strip(), int(start_line), int(end_line),False])
 
-        return final_list if final_list else []
+    return final_list if final_list else []
     
-    except Exception as e:
-        return [f"오류 발생: {str(e)}"]
-
-
-
 # "reviews"에서 [title,content]로 이루어진 리스트 previous_feedback
 def generate_re_review(prob,source_code,reviews) :
 
@@ -467,7 +458,7 @@ def chat3_with_gpt(prompt,solution_prompt):
 
 def generate_solution_code(problem_info : str , source_code : str, reviews : list) -> str :
 
-    final_list = [(review["title"], review["comments"],review["start_line"],review["end_line"]) for review in reviews]
+    final_list = [(review["title"], review["comments"],review["start_line_number"],review["end_line_number"]) for review in reviews]
     final_feedback = f'"""{json.dumps(final_list)}"""'
 
     prob = problem_info
