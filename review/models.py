@@ -26,5 +26,5 @@ class Review(models.Model) :
     is_passed= models.BooleanField(default=False) # 기본값은 통과하지 못했다는 뜻으로 False
 
 class Solution(models.Model) :
-    history_id= models.ForeignKey(History, on_delete=models.CASCADE)
+    problem_id= models.ForeignKey(Problem, on_delete=models.CASCADE)
     solution_code= models.TextField()
