@@ -277,8 +277,17 @@ def generate_review(prob,source_code) :
         if not content_response:
             raise ValueError("GPT 응답이 비어 있습니다.")
 
-        matches = re.findall(r'(\d+)\.\s*(.+?)\s*-\s*(.+?)(?=\n\d+\.|\Z)', content_response, re.DOTALL)
-        result = [[title.strip(), content.strip()] for _, title, content in matches]
+        # 정규 표현식을 사용하여 <Content>와 <Detail> 태그 안의 내용을 추출
+        contents = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
+        details = re.findall(r'<Detail>(.*?)</Detail>', content_response, re.DOTALL)
+
+        # [[<Content>, <Detail>], [<Content>, <Detail>], ...] 형태로 리스트 생성
+        result = [[content.strip(), detail.strip()] for content, detail in zip(contents, details)]
+
+        # 각 번호별 내용을 저장할 리스트
+        title_list = []
+
+        title_list = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
 
         maybe_feedback = []
         line_content = lines_system_prompt()
