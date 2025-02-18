@@ -82,8 +82,11 @@ def get_history(request, history_id) :
 #[POST] /api/v1/review
 @api_view(["POST"])
 def generate_review(request):
+    print("[시작] 코드 리뷰 생성 API 호출")
     # POST 데이터 처리
     data= request.data
+    print(f"[데이터 수신] 요청 데이터: {data}")
+    
     problem_id= data["problem_id"]
     problem_info = data["problem_info"]
     input_source= data["input_source"]
@@ -97,6 +100,7 @@ def generate_review(request):
     #                       URL 또는 이미지                      #
     #                         데이터 처리                        #
     #############################################################
+    print("[문제 생성] 문제 데이터베이스에 새 문제 저장")
     problem= None
     # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
     if not problem_id :
@@ -123,12 +127,15 @@ def generate_review(request):
         prob = f"{problem.title}\n{problem.content}"
     else:
         raise AssertionError
-    
+    print("[문제 정보 생성] 완료!!!")
+
     #############################################################
     #                        코드 리뷰 생성                      #
     #############################################################
+    print("[AI 리뷰 생성] AI 기반 코드 리뷰 생성 시작")
     reviews = data.get("reviews", [])
     final_list = generate_ai_review(prob, source_code, reviews)
+    print(f"[AI 리뷰 완료] 생성된 리뷰 개수: {len(final_list)}")
 
     # reviews= get_review(**params)
     # 히스토리 생성
@@ -178,10 +185,9 @@ def generate_review(request):
         history.name= return_data["reviews"][0]["title"] #리뷰의 첫번째 타이틀
         history.save()
         return_data["history_name"]= history.name
-    return Response(
-        return_data, 
-        status=status.HTTP_201_CREATED
-        )
+
+    print("[완료] 코드 리뷰 생성 API 종료")
+    return Response(return_data, status=status.HTTP_201_CREATED)
 
 # [PUT], [DELETE] /api/v1/history/{history_id}
 @api_view(["PUT", "DELETE"])
