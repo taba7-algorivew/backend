@@ -11,7 +11,7 @@ class Problem(models.Model) :
 class History(models.Model) :
     user_id= models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     problem_id= models.ForeignKey(Problem, on_delete=models.CASCADE)
-    name= models.CharField(max_length=25)
+    name= models.CharField(max_length=255)
     type= models.SmallIntegerField()
     source_code= models.TextField()
     created_at= models.DateTimeField(default=datetime.now())
@@ -19,7 +19,7 @@ class History(models.Model) :
 
 class Review(models.Model) :
     history_id= models.ForeignKey(History, on_delete=models.CASCADE)
-    title= models.CharField(max_length=50)
+    title= models.CharField(max_length=255)
     content= models.TextField()
     start_line_number= models.SmallIntegerField()
     end_line_number= models.SmallIntegerField()
