@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from datetime import datetime
 from .models import History, Review, Problem, Solution
 from user_auth.models import AlgoReviewUser
-from .ai_module import generate_ai_review, generate_chatbot, generate_final_code  # ai_module에서 함수 불러오기
+from .ai_module import generate_ai_review, generate_chatbot, generate_solution_code  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
 from django.shortcuts import get_object_or_404
 
@@ -248,7 +248,7 @@ def create_solution(request, problem_id):
     problem = get_object_or_404(Problem, id=problem_id)
     
     # AI 모듈에서 Solution 생성
-    solution_code = generate_final_code(problem_info, source_code, reviews)
+    solution_code = generate_solution_code(problem_info, source_code, reviews)
 
     # Solution 모델에 저장
     solution = Solution.objects.create(
