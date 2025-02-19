@@ -86,29 +86,37 @@ def review_system_prompt() :
     return feedback_content
 
 def re_review_system_prompt() :
-    correct_content = rereview_content = [
-        "**당신은 사용자가 제공한 이전 피드백을 기반으로 현재 풀이 코드가 개선되었는지를 평가하는 역할을 합니다.**",
+    correct_content = [
+        "**당신은 사용자가 제공한 이전 피드백과 현재 풀이 코드가 주어졌을 때, 해당 코드가 피드백을 적절히 해결했는지 평가하는 역할을 합니다.**",
         
         "**🚨 필수 규칙 (절대 어길 수 없음)**\n"
-        "1. **출력 시 `<피드백 제목>`은 반드시 그대로 유지해야 합니다.**\n"
-        "   - **어떠한 경우에도 `<피드백 제목>`을 새롭게 해석하거나 변경하지 마십시오.**\n"
-        "   - **기존 제목과 동일한 텍스트를 사용해야 합니다.**\n"
-        "2. **출력 시 `<피드백 내용>`은 하나의 단락으로만 작성해야 합니다.**\n"
+        "1. **출력 시 `<피드백 제목>`은 절대 포함하지 않습니다.**\n"
+        "2. **출력은 `<content>`와 `<status>` 태그만 포함해야 합니다. `<title>`을 출력하면 안 됩니다.**\n"
+        "3. **출력 시 `<content>` 내용은 반드시 하나의 단락으로 작성해야 합니다.**\n"
         "   - **문제점, 해결 방법, 기대 효과 등을 여러 개의 문장으로 나누지 말고 하나의 단락에 포함해야 합니다.**\n"
         "   - **여러 개의 문단으로 나누지 마십시오.**\n"
-        "   - **예외 없이 한 문단으로 작성해야 합니다.**\n"
-        
+        "   - **예외 없이 하나의 단락으로 유지해야 합니다.**\n",
+
         "**📌 평가 방식**\n"
-        "- 새로운 피드백을 생성하지 않으며, 이전 피드백이 완수되었는지를 평가합니다.\n"
-        "- 완수된 경우 해당 피드백을 제외하며, 미완수된 경우 `<피드백 제목>`은 유지하고, `<피드백 내용>`에 현재 풀이 코드에서 어떤 부분이 부족한지를 설명합니다.\n",
-        
+        "- 새로운 피드백을 생성하지 않으며, 기존 피드백이 완수되었는지를 평가합니다.\n"
+        "- 완수된 경우 해당 피드백을 제외하며, 미완수된 경우 <피드백 제목>과 <피드백 내용>에 기반하여 현재 풀이 코드에서 어떤 부분이 부족한지를 설명합니다.\n",
+
         "**📌 출력 형식 (반드시 이 형식으로 출력해야 합니다.)**\n"
         '"""',
-        "<title><피드백 제목></title>",
-        "<content><피드백 내용></content>",
+        "<content>comment</content>",
         "<status>pass 또는 fail</status>",
         '"""',
-        
+
+        "**📌 `pass` 상태의 출력 기준**\n"
+        "- 풀이 코드가 이전 피드백을 완전히 반영했다면 `<status>pass</status>`를 출력합니다.\n"
+        "- `<content>`에는 풀이 코드가 적절하게 개선되었다는 칭찬 또는 공감의 피드백을 제공합니다.\n"
+        "- `pass`일 때, `<content>`는 한 문단으로 작성되어야 합니다.\n",
+
+        "**📌 `fail` 상태의 출력 기준**\n"
+        "- 풀이 코드가 이전 피드백을 반영하지 못했다면 `<status>fail</status>`를 출력합니다.\n"
+        "- `<content>`에는 현재 풀이 코드가 어떻게 부족한지를 상세하게 설명합니다.\n"
+        "- `fail`일 때, `<content>`는 반드시 한 문단이어야 하며, 문제점, 해결 방법, 기대 효과 등을 포함해야 합니다.\n",
+
         "**📌 잘못된 예시 (이런 방식으로 출력하면 안 됩니다!)**\n"
         '"""',
         "<title>이분 탐색 최적화</title>",
@@ -119,19 +127,19 @@ def re_review_system_prompt() :
         "</content>",
         "<status>fail</status>",
         '"""',
-        
+
         "**📌 올바른 예시 (반드시 이 형식으로 출력할 것!)**\n"
         '"""',
-        "<title>이분 탐색 최적화</title>",
         "<content>현재 BFS 알고리즘은 비효율적으로 동작합니다. DFS를 사용하면 성능이 개선될 수 있으며, 이를 통해 O(N^2)에서 O(N log N)으로 최적화할 수 있습니다.</content>",
         "<status>fail</status>",
         '"""',
 
-        "**📌 문제 해결 기준**\n"
-        "- 풀이 코드가 이전 피드백을 완전히 반영했다면 `<status>pass</status>`를 출력합니다.\n"
-        "- 여전히 피드백이 반영되지 않았다면 `<status>fail</status>`를 출력합니다.\n"
-        "- `fail` 상태인 경우 `<피드백 내용>`에 어떤 부분이 부족한지를 한 문단으로 설명합니다.\n"
+        "**📌 추가 유의 사항**\n"
+        "- `<content>` 내용은 GPT가 직접 요약하거나 재해석하지 말고, 사용자가 입력한 피드백과 풀이 코드에 기반하여 직접 평가해야 합니다.\n"
+        "- `<status>`는 오직 `pass` 또는 `fail`로만 출력해야 합니다.\n"
+        "- `fail`일 경우, 단순한 개선 필요성만 서술하지 말고, 구체적인 문제점과 개선 방법을 포함해야 합니다.\n"
     ]
+
 
     return correct_content
 
@@ -288,54 +296,55 @@ def markdown_system_prompt() :
 
     
 ########################parse,re_Final_function#############################################
-def parse_response_with_lines(response):
-    matches = re.finditer(r'<title>(.*?)</title>\s*<content>(.*?)</content>\s*<status>(pass|fail)</status>', response, re.DOTALL)
-    
-    lines_list = []
-    total_list = []
-    
-    for match in matches:
-        title = match.group(1).strip()
-        content = match.group(2).strip()
-        status = match.group(3).strip().lower()
-        
-        status_flag = True if status == 'pass' else False
-        start_line = 0  # 실제 라인 번호를 찾는 로직이 필요하면 추가 가능
-        end_line = 0    # 실제 라인 번호를 찾는 로직이 필요하면 추가 가능
-        
-        total_list.append([title, content, start_line, end_line, status_flag])
-        
-        if not status_flag:
-            lines_list.append([title, content])
-    
-    return lines_list, total_list
+def description_sc(response):
+    """
+    response 문자열에서 <content>와 <status> 값을 추출하는 함수
+    """
+    content_match = re.search(r'<content>(.*?)</content>', response, re.DOTALL)
+    status_match = re.search(r'<status>(.*?)</status>', response)
 
-def create_final_list(total_list, fail_feedback):
-    final_list = []
-    temp_list = []
-    feedback_data = {}
-    
-    for feedback in fail_feedback:
-        match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)\s*(.*?)$', feedback, re.DOTALL | re.MULTILINE)
+    content = content_match.group(1).strip() if content_match else None
+    status = status_match.group(1).strip() if status_match else None
+
+    return content, status
+
+def process_rentest_list(rentest_list):
+    fail_list = []
+    total_list = []
+
+    for title, content, status in rentest_list:
+        if status == 'fail':
+            fail_list.append([title, content])  # 실패한 경우 fail_list에 추가
+
+        total_list.append([title, content, 0, 0, status])  # 모든 항목을 total_list에 추가
+
+    return fail_list, total_list
+
+def update_total_list_from_tem_list(tem_list, total_list):
+    """
+    tem_list에 있는 정보를 추출하여 total_list에 반영하는 함수.
+    같은 title이 있으면 new_content와 (new_start_line, new_end_line)을 업데이트함.
+    """
+    for response in tem_list:
+        # 정규식을 사용하여 title, (new_start_line, new_end_line), new_content 추출
+        match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)\s*(.*)', response, re.DOTALL | re.MULTILINE)
+
         if match:
             title = match.group(1).strip()
-            start_line = int(match.group(2))
-            end_line = int(match.group(3))
-            content = match.group(4).strip()
-            feedback_data[title] = (content, start_line, end_line)
-    
-    for item in total_list:
-        title, content, start_line, end_line, status = item
-        
-        if title in feedback_data and not status:  # fail인 경우 업데이트
-            new_content, new_start, new_end = feedback_data[title]
-            final_list.append([title, new_content, new_start, new_end, status])
-            temp_list.append([title, new_content])
-        else:
-            final_list.append(item)
-            temp_list.append([title, content])
-    
-    return temp_list, final_list
+            new_start_line = int(match.group(2))
+            new_end_line = int(match.group(3))
+            new_content = match.group(4).strip()
+
+            # total_list 업데이트
+            for i, item in enumerate(total_list):
+                existing_title, existing_content, start_line, end_line, status = item
+                
+                if existing_title == title:
+                    # 같은 title이 있으면 업데이트
+                    total_list[i] = [title, new_content, new_start_line, new_end_line, status]
+                    break  # 한 번 업데이트하면 루프 종료
+
+    return total_list
 
 ########################chatgpt_function########################################
 
@@ -457,17 +466,19 @@ def generate_re_review(prob,source_code,reviews) :
 
 
     previous_list = [(review["title"], review["comments"]) for review in reviews]
-    previous_feedback = f'"""\n{json.dumps(previous_list, indent=4, ensure_ascii=False)}\n"""'
+    # previous_feedback = f'"""\n{json.dumps(previous_list, indent=4, ensure_ascii=False)}\n"""'
+    rentest_list = list()
 
     re_review_content = re_review_system_prompt()
+    for title, content in previous_list : 
+        user_input2 = f"<문제 설명> {prob}\n<풀이 코드> {source_code}\n<피드백 제목>{title}\n<피드백 내용>{content}"
+        response = chat_with_gpt(user_input2,re_review_content)
+        new_content, new_status = description_sc(response)
+        rentest_list.append([title,new_content,new_status])
 
-    user_input2 = f"<문제 설명> {prob}\n<풀이 코드> {source_code}\n<previous_feedback>{previous_feedback}"
+    fail_list, total_list = process_rentest_list(rentest_list)
 
-    re_content_response = chat_with_gpt(user_input2,re_review_content)
-
-    lines_list, total_list = parse_response_with_lines(re_content_response)
-
-    fail_feedback = list()
+    tem_list = list()
     line_content = lines_system_prompt()
     caution = """
     ✅ 주의 사항:
@@ -475,13 +486,14 @@ def generate_re_review(prob,source_code,reviews) :
         - 만약 여러 개의 가능성이 있는 경우, 가장 핵심적인 한 가지를 GPT가 선택하여 출력해야 합니다.
         - 여러 개의 (시작 줄, 끝 줄) 개선 사항을 나열하지 말고, 오직 하나만 출력하세요.
     """
-    for i in range(len(lines_list)) :
-        user_input4 = "<피드백 제목>"+lines_list[i][0] + "\n"+ "<피드백 내용>" + lines_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + source_code + "\n" + caution
+    for i in range(len(fail_list)) :
+        user_input4 = "<피드백 제목>"+fail_list[i][0] + "\n"+ "<피드백 내용>" + fail_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + source_code + "\n" + "<주의사항>"+ caution
         response = chat2_with_gpt(user_input4, line_content)
-        fail_feedback.append(response)
+        tem_list.append(response)
+    
+    final_list = update_total_list_from_tem_list(tem_list, total_list)
 
-
-    temp_list,final_list = create_final_list(total_list, fail_feedback)
+    temp_list = [[title, content] for title, content, _, _, _ in final_list]
 
     markdown_prompt = markdown_system_prompt()
     contest_list = list()
