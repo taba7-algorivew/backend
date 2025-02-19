@@ -16,8 +16,6 @@ def hello_algoreview(request):
 #[GET] /api/v1/user-histories/{user_id}
 @api_view(["GET"])
 def get_histories(request, user_id):
-    print(f"/api/v1/user-histories - get_histories | user_id: {user_id}")
-    
     histories = History.objects.filter(user_id=user_id, is_deleted=False) \
         .select_related("problem_id") \
         .values("id", "problem_id", "problem_id__name", "name") \
@@ -27,8 +25,6 @@ def get_histories(request, user_id):
     if not histories.exists():
         print(f"No history found for user_id: {user_id}")
         return Response({"problems": []}, status=status.HTTP_200_OK)
-
-    print(f"Found {histories.count()} histories for user_id: {user_id}")
 
     # 같은 문제 번호를 가진 데이터들을 뭉쳐두기
     problem_set = set()
@@ -55,13 +51,11 @@ def get_histories(request, user_id):
             problems.append(problem_dict[problem_id])
             problem_set.add(problem_id)
 
-    print(f"Returning {len(problems)} problems")
     return Response({"problems": problems}, status=status.HTTP_200_OK)
 
 #[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
 def get_history(request, history_id) :
-    print("히스토리 아이디로 조회들어옴")
     history= History.objects.filter(id=history_id).first()
     problem= Problem.objects.filter(id= history.problem_id.id).first()
     reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number", "is_passed")
@@ -131,7 +125,6 @@ def generate_review(request):
     reviews = data.get("reviews", [])
     final_list = generate_ai_review(prob, source_code, reviews)
 
-    # reviews= get_review(**params)
     # 히스토리 생성
     history= History.objects.create(
         user_id= user,
@@ -150,7 +143,6 @@ def generate_review(request):
         "reviews": []
     }
 
-    #print(final_list)
     for review in final_list:
         title= review[0]
         comments= review[1]
@@ -175,6 +167,7 @@ def generate_review(request):
             "is_passed": review[4]
         }
         return_data["reviews"].append(review_data)
+
         # 히스토리 이름 지정
         history.name= return_data["reviews"][0]["title"] #리뷰의 첫번째 타이틀
         history.save()
@@ -185,8 +178,8 @@ def generate_review(request):
 # [PUT], [DELETE] /api/v1/history/{history_id}
 @api_view(["PUT", "DELETE"])
 def handle_history(request, history_id) :
-    # history_id로 객체 불러오기
     history= History.objects.filter(id= history_id).first()    
+    
     if request.method == "PUT" :
         new_name= request.data.get("new_name")
         history= History.objects.get(id=history_id)
@@ -221,24 +214,17 @@ def handle_problem(request, problem_id):
 # [GET, POST] /api/v1/solution/{problem_id}
 @api_view(["GET", "POST"])
 def solution_view(request, problem_id):
-    print(f"[요청 수신] {request.method} 요청이 들어왔습니다. 문제 ID: {problem_id}")
-
     # 문제 존재 여부 검증 (존재하지 않으면 404 반환)
     problem = get_object_or_404(Problem, id=problem_id)
-    print(f"[문제 확인] 문제 ID {problem_id}가 확인되었습니다.")
 
     if request.method == "GET":
-        print("[GET 요청 처리 시작] 모범 답안 조회 중...")
-
         # 해당 problem_id에 대한 Solution 조회
         solution = Solution.objects.filter(problem_id=problem_id).first()
 
         if solution:
-            print("[모범 답안 존재] 해당 문제에 대한 모범 답안이 존재합니다.")
             is_created = True
             solution_code = solution.solution_code
         else:
-            print("[모범 답안 없음] 해당 문제에 대한 모범 답안이 존재하지 않습니다.")
             is_created = False
             solution_code = ""
 
@@ -248,42 +234,32 @@ def solution_view(request, problem_id):
             "solution_code": solution_code
         }
 
-        print("[GET 요청 처리 완료] 응답 반환.")
         return Response(return_data, status=status.HTTP_200_OK)
 
     elif request.method == "POST":
-        print("[POST 요청 처리 시작] 모범 답안 생성 요청 수신.")
-
         # 요청 데이터에서 필드 추출
         problem_info = request.data.get("problem_info")
         source_code = request.data.get("source_code")
         reviews = request.data.get("reviews", [])
 
-        print("[요청 데이터 확인] 문제 정보, 소스 코드 및 리뷰 데이터를 추출했습니다.")
-
         # 기존에 생성된 Solution이 있는지 확인
         existing_solution = Solution.objects.filter(problem_id=problem_id).first()
         if existing_solution:
-            print("[모범 답안 중복 생성 시도] 해당 문제에 대한 모범 답안이 이미 존재합니다.")
             return Response({
                 "detail": "모범 답안이 이미 생성되었습니다.",
                 "solution_code": existing_solution.solution_code
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        print("[AI 모듈 호출] 모범 답안 코드 생성 중...")
         # AI 모듈을 사용하여 Solution 코드 생성
         solution_code = generate_solution_code(problem_info, source_code, reviews)
-        print("[AI 모듈 완료] 모범 답안 코드가 성공적으로 생성되었습니다.")
 
         # Solution 모델에 저장
         Solution.objects.create(
             problem_id=problem,
             solution_code=solution_code
         )
-        print("[DB 저장 완료] 모범 답안이 데이터베이스에 저장되었습니다.")
 
         # POST 요청 시 solution_code만 반환
-        print("[POST 요청 처리 완료] 응답 반환.")
         return Response({
             "solution_code": solution_code
         }, status=status.HTTP_201_CREATED)
