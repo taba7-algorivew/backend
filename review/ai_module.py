@@ -191,7 +191,7 @@ def chatbot_system_prompt() -> list:
         {"role": "system", "content": "교육적 어투로 답해야 합니다."}
     ]
 
-def markdown_systme_prompt() :
+def markdown_system_prompt() :
     read_content = [
         "**당신은 사용자가 제공하는 피드백 내용을 가독성 높은 형식으로 변환하는 역할을 합니다.**",
 
@@ -364,11 +364,11 @@ def generate_review(prob,source_code) :
             temp_list.append([title, content.strip()])
             final_list.append([title, content.strip(), int(start_line), int(end_line),False])
 
-    markdown_prompt = markdown_systme_prompt()
+    markdown_prompt = markdown_system_prompt()
     contest_list = list()
     for title,content in temp_list :
-        user_input = f"<피드백 제목>{title} \n<피드백 내용>{content}"
-        response = chat4_with_gpt(user_input)
+        user_mark = f"<피드백 제목>{title} \n<피드백 내용>{content}"
+        response = chat2_with_gpt(user_mark,markdown_prompt)
         contest_list.append([title,response])
     temp_list.clear()
 
