@@ -218,46 +218,75 @@ def handle_problem(request, problem_id):
     else :
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
+# [GET, POST] /api/v1/solution/{problem_id}
 @api_view(["GET", "POST"])
 def solution_view(request, problem_id):
+    print(f"[요청 수신] {request.method} 요청이 들어왔습니다. 문제 ID: {problem_id}")
+
+    # 문제 존재 여부 검증 (존재하지 않으면 404 반환)
+    problem = get_object_or_404(Problem, id=problem_id)
+    print(f"[문제 확인] 문제 ID {problem_id}가 확인되었습니다.")
+
     if request.method == "GET":
-        # problem_id에 해당하는 Solution 조회 (없을 경우 None 반환)
+        print("[GET 요청 처리 시작] 모범 답안 조회 중...")
+
+        # 해당 problem_id에 대한 Solution 조회
         solution = Solution.objects.filter(problem_id=problem_id).first()
 
-        # Solution이 존재하지 않을 경우 기본 메시지 반환
-        solution_code = solution.solution_code if solution else "모범 답안 생성 없이 문제를 모두 해결하셨습니다! 훌륭합니다!"
+        if solution:
+            print("[모범 답안 존재] 해당 문제에 대한 모범 답안이 존재합니다.")
+            is_created = True
+            solution_code = solution.solution_code
+        else:
+            print("[모범 답안 없음] 해당 문제에 대한 모범 답안이 존재하지 않습니다.")
+            is_created = False
+            solution_code = ""
 
         # 응답 데이터 구성
         return_data = {
-            "problem_id": problem_id,
+            "is_created": is_created,
             "solution_code": solution_code
         }
+
+        print("[GET 요청 처리 완료] 응답 반환.")
         return Response(return_data, status=status.HTTP_200_OK)
 
     elif request.method == "POST":
+        print("[POST 요청 처리 시작] 모범 답안 생성 요청 수신.")
+
         # 요청 데이터에서 필드 추출
         problem_info = request.data.get("problem_info")
         source_code = request.data.get("source_code")
         reviews = request.data.get("reviews", [])
 
-        # 문제 존재 여부 검증 (get_object_or_404 없으면 404 반환)
-        problem = get_object_or_404(Problem, id=problem_id)
+        print("[요청 데이터 확인] 문제 정보, 소스 코드 및 리뷰 데이터를 추출했습니다.")
 
-        # AI 모듈에서 Solution 생성
+        # 기존에 생성된 Solution이 있는지 확인
+        existing_solution = Solution.objects.filter(problem_id=problem_id).first()
+        if existing_solution:
+            print("[모범 답안 중복 생성 시도] 해당 문제에 대한 모범 답안이 이미 존재합니다.")
+            return Response({
+                "detail": "모범 답안이 이미 생성되었습니다.",
+                "solution_code": existing_solution.solution_code
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        print("[AI 모듈 호출] 모범 답안 코드 생성 중...")
+        # AI 모듈을 사용하여 Solution 코드 생성
         solution_code = generate_solution_code(problem_info, source_code, reviews)
+        print("[AI 모듈 완료] 모범 답안 코드가 성공적으로 생성되었습니다.")
 
         # Solution 모델에 저장
-        solution = Solution.objects.create(
+        Solution.objects.create(
             problem_id=problem,
             solution_code=solution_code
         )
+        print("[DB 저장 완료] 모범 답안이 데이터베이스에 저장되었습니다.")
 
-        # 응답 데이터 구성
-        return_data = {
-            "is_created": True,
-            "solution_code": solution.solution_code
-        }
-        return Response(return_data, status=status.HTTP_201_CREATED)
+        # POST 요청 시 solution_code만 반환
+        print("[POST 요청 처리 완료] 응답 반환.")
+        return Response({
+            "solution_code": solution_code
+        }, status=status.HTTP_201_CREATED)
 
 # [POST] /api/v1/chatbot
 @api_view(["POST"])
