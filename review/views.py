@@ -78,12 +78,8 @@ def get_history(request, history_id) :
 def generate_review(request):
     # POST 데이터 처리
     data= request.data
-    
     problem_id= data["problem_id"]
     problem_info = data["problem_info"]
-    input_source= data["input_source"]
-    input_data= data["input_data"]
-    #user_id= int(data["user_id"]["userId"])
     user_id= int(data["user_id"])
     user= AlgoReviewUser.objects.get(id= user_id)
     source_code= data["source_code"]
@@ -95,6 +91,8 @@ def generate_review(request):
     problem= None
     # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
     if not problem_id :
+        input_source= data["input_source"]
+        input_data= data["input_data"]
         # URL에 대한 처리
         if input_source == "url" :
             problem_data= get_the_url(input_data)
