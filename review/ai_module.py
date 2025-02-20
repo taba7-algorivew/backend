@@ -275,6 +275,30 @@ def markdown_system_prompt() :
 
     return read_content
 
+def sucess_lines_prompt() :
+    success_prompt = [
+        "당신의 역할은 주어진 코드(`index_code`)가 <피드백 제목>과 <피드백 내용>에서 제시된 요구 사항을 성공적으로 해결한 부분이 어디인지 찾아내는 것입니다.",
+        "코드는 이미 `generate_index_code(source_code)`를 사용하여 `index_code`로 변환되었으며, 줄 번호와 코드가 함께 포함되어 있습니다.",
+        "당신은 `index_code`를 분석하여 해당 피드백이 반영된 정확한 줄 번호 범위를 찾아야 합니다.",
+        "출력은 반드시 지정된 형식으로 이루어져야 하며, 형식에서 벗어난 출력은 허용되지 않습니다.",
+        "피드백이 반영된 부분을 찾을 때, 해당 변경이 정확히 어떤 코드에서 이루어졌는지를 분석하여 줄 번호를 결정해야 합니다.",
+        "출력 시 <피드백 제목>과 <피드백 내용>을 그대로 사용하며, 내용을 요약하거나 재구성하지 않습니다.",
+        "출력 형식은 다음과 같다",
+        """
+    <title> 피드백 제목 </title>
+    (시작 줄, 끝 줄) 피드백 내용
+        """,
+        "출력 예시는 다음과 같다",
+        """
+    <title> 이분 탐색 최적화 </title>
+    (17, 25) 기존에는 이분 탐색의 범위 설정이 비효율적이었으나, 최적의 mid 값을 조정하는 로직이 개선되어 더 정확한 결과를 도출할 수 있습니다.
+        """,
+        "줄 번호(`시작 줄, 끝 줄`)는 반드시 `index_code`에서 피드백이 반영된 부분의 첫 번째 줄과 마지막 줄을 정확하게 찾아야 합니다.",
+        "단순히 `코드가 개선되었습니다.`라고 하지 말고, 어떤 점이 개선되었는지를 명확하게 설명해야 합니다.",
+        "출력 결과는 한 줄 공백 없이 연속된 형식으로 제공되어야 합니다.",
+    ]
+    return success_prompt
+
 
     
 ########################parse,re_Final_function#############################################
@@ -299,14 +323,17 @@ def description_sc(response):
 def process_rentest_list(rentest_list):
     fail_list = []
     total_list = []
+    pass_list = []
 
     for title, content, status in rentest_list:
         if status == 'fail':
             fail_list.append([title, content])  # 실패한 경우 fail_list에 추가
+        else :
+            pass_list.append([title,content])
 
         total_list.append([title, content, 0, 0, status])  # 모든 항목을 total_list에 추가
 
-    return fail_list, total_list
+    return fail_list, total_list, pass_list
 
 def update_total_list_from_tem_list(tem_list, total_list):
     """
@@ -472,7 +499,7 @@ def generate_re_review(prob,source_code,reviews) :
         new_content, new_status = description_sc(response)
         rentest_list.append([title,new_content,new_status])
 
-    fail_list, total_list = process_rentest_list(rentest_list)
+    fail_list, total_list,pass_list = process_rentest_list(rentest_list)
 
     tem_list = list()
     line_content = lines_system_prompt()
@@ -487,8 +514,18 @@ def generate_re_review(prob,source_code,reviews) :
         user_input4 = "<피드백 제목>"+fail_list[i][0] + "\n"+ "<피드백 내용>" + fail_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + index_code + "\n" + "<주의사항>"+ caution
         response = chat2_with_gpt(user_input4, line_content)
         tem_list.append(response)
+
+    ## 성공한 피드백
+    pem_list = list()
+    sucess_prompt = sucess_lines_prompt()
+    for i in range(len(pass_list)) : 
+        user_input5 = "<피드백 제목>"+ pass_list[i][0] + "\n"+ "<피드백 내용>" + pass_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + index_code + "\n" + caution
+        response = chat2_with_gpt(user_input5, sucess_prompt)
+        pem_list.append(response)
     
-    final_list = update_total_list_from_tem_list(tem_list, total_list)
+    medium_list = update_total_list_from_tem_list(tem_list, total_list)
+    final_list = update_total_list_from_tem_list(pem_list, medium_list)
+
 
     updated_final_list = convert_status_to_boolean(final_list)
     final_list.clear()
