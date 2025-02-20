@@ -278,6 +278,12 @@ def markdown_system_prompt() :
 
     
 ########################parse,re_Final_function#############################################
+# 주어진 코드 문자열에 줄 번호를 추가하여 index_code를 생성하는 함수.
+def generate_index_code(code):
+    lines = code.split('\n')  # 코드 줄 단위로 나누기
+    index_code = "\n".join([f"{i+1}: {line}" for i, line in enumerate(lines)])  # 줄 번호 추가
+    return index_code
+
 def description_sc(response):
     """
     response 문자열에서 <content>와 <status> 값을 추출하는 함수
@@ -395,6 +401,7 @@ def generate_review(prob,source_code) :
 
     maybe_feedback = []
     line_content = lines_system_prompt()
+    index_code = generate_index_code(source_code)
 
     caution = """
 ✅ caution :
@@ -404,7 +411,7 @@ def generate_review(prob,source_code) :
 """
         
     for title, content in result:
-        user_input3 = f"<피드백 제목> {title}\n<피드백 내용> {content}\n<문제설명> {prob}\n<풀이코드> {source_code}\n <caution> {caution}"
+        user_input3 = f"<피드백 제목> {title}\n<피드백 내용> {content}\n<문제설명> {prob}\n<풀이코드> {index_code}\n <caution> {caution}"
         response = chat2_with_gpt(user_input3, line_content)
         maybe_feedback.append(response)
 
@@ -469,6 +476,7 @@ def generate_re_review(prob,source_code,reviews) :
 
     tem_list = list()
     line_content = lines_system_prompt()
+    index_code = generate_index_code(source_code)
     caution = """
     ✅ 주의 사항:
         - 반드시 하나의 (시작 줄, 끝 줄) 개선 사항만 출력해야 합니다.
@@ -476,7 +484,7 @@ def generate_re_review(prob,source_code,reviews) :
         - 여러 개의 (시작 줄, 끝 줄) 개선 사항을 나열하지 말고, 오직 하나만 출력하세요.
     """
     for i in range(len(fail_list)) :
-        user_input4 = "<피드백 제목>"+fail_list[i][0] + "\n"+ "<피드백 내용>" + fail_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + source_code + "\n" + "<주의사항>"+ caution
+        user_input4 = "<피드백 제목>"+fail_list[i][0] + "\n"+ "<피드백 내용>" + fail_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + index_code + "\n" + "<주의사항>"+ caution
         response = chat2_with_gpt(user_input4, line_content)
         tem_list.append(response)
     
