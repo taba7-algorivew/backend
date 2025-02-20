@@ -651,6 +651,14 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
     user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + source_code + "\n" + "<FINAL_LIST>" + final_feedback
     code_response = chat3_with_gpt(user_input3,solution_prompt)
 
+    code_response = code_response.strip().strip("```")
+    def_index = code_response.find("def")
+    if def_index != -1:
+        code_response = code_response[def_index:]
+    
+    # Remove any trailing backticks or whitespace
+    code_response = code_response.strip().strip("```").strip()
+
     return code_response
 
 
