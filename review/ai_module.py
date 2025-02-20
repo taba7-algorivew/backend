@@ -346,6 +346,13 @@ def update_total_list_from_tem_list(tem_list, total_list):
 
     return total_list
 
+def convert_status_to_boolean(final_list):
+    """
+    final_list에서 pass/fail을 True/False로 변환하는 함수
+    """
+    updated_list = [[title, content, start_line, end_line, status == 'pass'] for title, content, start_line, end_line, status in final_list]
+    return updated_list
+
 ########################chatgpt_function########################################
 
 def chat_with_gpt(prompt, review_content):
@@ -493,6 +500,10 @@ def generate_re_review(prob,source_code,reviews) :
     
     final_list = update_total_list_from_tem_list(tem_list, total_list)
 
+    updated_final_list = convert_status_to_boolean(final_list)
+    final_list.clear()
+    final_list = updated_final_list
+
     temp_list = [[title, content] for title, content, _, _, _ in final_list]
 
     markdown_prompt = markdown_system_prompt()
@@ -523,6 +534,8 @@ def generate_re_review(prob,source_code,reviews) :
         title = item[0]  # 현재 title
         if title in content_dict:  # 정제된 content가 존재하는 경우
             item[1] = content_dict[title]  # content 업데이트
+
+    
 
     return final_list if final_list else []
 
