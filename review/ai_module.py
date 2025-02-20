@@ -532,7 +532,7 @@ def generate_re_review(prob,source_code,reviews) :
 #########################Main Function###########################################
 def generate_ai_review(prob : str, source_code : str, reviews : list) : 
     
-    if reviews :
+    if len(reviews) > 0 :
         result = generate_re_review(prob,source_code,reviews)
     else :
         result = generate_review(prob,source_code)
