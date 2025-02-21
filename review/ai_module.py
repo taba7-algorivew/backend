@@ -711,26 +711,29 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
     code_response = chat3_with_gpt(user_input3,solution_prompt)
 
     # 🔹 정규식을 사용하여 Python 코드 (solution_code) 추출
-    code_match = re.search(r"```python\n(.*?)\n```", code_response, re.DOTALL)
-    solution_code = code_match.group(1) if code_match else ""
+    # - 첫 번째 백틱이 없는 경우도 처리할 수 있도록 수정
+    code_match = re.search(r"(?:```python\n|python\n)(.*?)(?:\n```|\n<lines>)", code_response, re.DOTALL)
+    solution_code = code_match.group(1).strip() if code_match else ""
 
     # 🔹 정규식을 사용하여 XML 데이터 (solution_xml) 추출
-    xml_match = re.search(r"```xml\n(.*?)\n```", code_response, re.DOTALL)
-    solution_xml = xml_match.group(1) if xml_match else ""
+    xml_match = re.search(r"<lines>(.*?)</lines>", code_response, re.DOTALL)
+    solution_xml = f"<lines>{xml_match.group(1)}</lines>" if xml_match else ""
 
     # 🔹 XML을 파싱하여 solution_list 생성
-    root = ET.fromstring(solution_xml)
-
     solution_list = []
-    for line in root.findall(".//line"):
-        title = line.find("title").text
-        start_line = int(line.find("start_line").text)
-        end_line = int(line.find("end_line").text)
-        solution_list.append([title, start_line, end_line])
-    
+    if solution_xml:
+        root = ET.fromstring(solution_xml)
+        for line in root.findall(".//line"):
+            title = line.find("title").text
+            start_line = int(line.find("start_line").text)
+            end_line = int(line.find("end_line").text)
+            solution_list.append([title, start_line, end_line])
+
     # 🔹 결과 출력
-    print("Extracted Solution Code:\n", solution_code)
-    print("\nExtracted XML (solution_list):\n", solution_list)
+    print("=== Extracted Solution Code ===")
+    print(solution_code)
+    print("\n=== Extracted XML (solution_list) ===")
+    print(solution_list)
 
     return solution_code,solution_list
 
