@@ -13,19 +13,42 @@ env = environ.Env()
 if os.path.exists(".env"):  
     environ.Env.read_env()
 
+# [Prod] 환경 변수 로드 함수
+def read_secret(secret_name, default=None):
+    path = f"/run/secrets/{secret_name}"
+    try:
+        with open(path, "r") as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        return default
+
+# 서버 환경에 따라 로드하는 방법이 다름
+def get_env_var(var_name, secret_name=None, default=None):
+    # 1️⃣ .bashrc나 실행 환경 변수에서 로드
+    value = os.getenv(var_name)
+    if value:
+        return value
+    
+    # 2️⃣ Docker 시크릿에서 로드 (secret_name이 제공된 경우)
+    if secret_name:
+        value = read_secret(secret_name)
+        if value:
+            return value
+    
+    # 3️⃣ 기본값 반환 또는 오류 발생
+    if default is not None:
+        return default
+    raise ImproperlyConfigured(f"{var_name} is not set and no default provided!")
+
 # 기본 경로 설정
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 환경변수에서 SECRET_KEY 불러오기 (없으면 에러 발생)
-SECRET_KEY = env("SECRET_KEY", default=None)
-if SECRET_KEY is None:
-    raise ImproperlyConfigured("SECRET_KEY environment variable is missing!")
-
-# DEBUG 설정 (환경변수에서 불러오되, 기본값은 False)
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
-
-# 허용된 호스트 설정 (환경변수에서 불러오고 기본값은 모두 허용)
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+# Django 필수 환경 변수 불러오기
+SECRET_KEY = get_env_var("SECRET_KEY", secret_name="secret_key")
+DEBUG = get_env_var("DEBUG", secret_name="debug_mode", default="False").lower() == "true"
+ALLOWED_HOSTS = get_env_var("ALLOWED_HOSTS", default="*").split(",")
+OPENAI_API_KEY = get_env_var("OPENAI_API_KEY", secret_name="open_api_key")
+GENAI_API_KEY = get_env_var("GENAI_API_KEY", secret_name="genai_api_key")
 
 # Installed Apps
 INSTALLED_APPS = [
@@ -78,15 +101,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# Database 설정 (PostgreSQL 환경변수 기반)
+# Database 설정
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD': env("DB_PASSWORD"),
-        'HOST': env("DB_HOST"),
-        'PORT': env("DB_PORT"),
+        'NAME': get_env_var("DB_NAME", secret_name="db_name"),
+        'USER': get_env_var("DB_USER", secret_name="db_user"),
+        'PASSWORD': get_env_var("DB_PASSWORD", secret_name="db_password"),
+        'HOST': get_env_var("DB_HOST", secret_name="db_host"),
+        'PORT': get_env_var("DB_PORT", secret_name="db_port"),
     }
 }
 
