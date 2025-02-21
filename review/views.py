@@ -290,3 +290,50 @@ def chatbot(request) :
             {"error": f"Internal Server Error: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+# [GET] /api/v1/histories/{problem_id}/first-review
+@api_view(["GET"])
+def get_first_review(request, problem_id):
+    """
+    코드 리뷰의 최초 의뢰 기록 조회 API
+
+    - problem_id로 history 테이블 필터링
+    - created_at을 기준으로 오름차순 정렬하여 첫 번째 레코드의 history_id와 source_code 가져오기
+    - 해당 history_id로 review 테이블에서 start_line_number, end_line_number 가져오기
+    - 요청 성공 시 최초 코드 및 리뷰 라인 정보 반환
+
+    응답 형식:
+    {
+        "first_code": "코드 문자열",
+        "lines": [
+            {"start_line_number": int, "end_line_number": int},
+            ...
+        ]
+    }
+    """
+    # problem_id를 기반으로 history 레코드 조회
+    first_history = (
+        History.objects
+        .filter(problem_id=problem_id, is_deleted=False)
+        .order_by("created_at")
+        .first()
+    )
+
+    if not first_history:
+        return Response({"detail": "해당 문제의 히스토리를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    # 해당 history_id로 review 레코드 조회
+    reviews = Review.objects.filter(history_id=first_history.id)
+
+    # 리뷰 라인 정보 추출
+    lines = [
+        {"start_line_number": review.start_line_number, "end_line_number": review.end_line_number}
+        for review in reviews
+    ]
+
+    response_data = {
+        "first_code": first_history.source_code,
+        "lines": lines
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
