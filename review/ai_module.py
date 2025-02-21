@@ -18,69 +18,54 @@ def review_system_prompt() :
         "<문제 설명>은 알고리즘 문제에 대한 정보입니다.",
         "<풀이 코드>는 <문제 설명>을 보고 유저가 작성한 프로그래밍 코드입니다.",
         "당신은 <풀이 코드>를 보고 <문제 설명>에 적합하고 잘 작동하는지를 판단한 후, 정답에 가까워질 수 있도록 실질적인 개선 피드백을 제공해야 합니다.",
-        
+
         "당신은 코드 리뷰를 제공하는 AI로서, <풀이 코드>의 **알고리즘적 접근 방식**, **논리적 오류**, **시간 복잡도 개선** 및 **정답률 향상**을 위한 피드백을 제공합니다.",
-        
+
         "## ✅ 코드 리뷰 방식:",
         "1. **정확성 검토**",
         "   - <풀이 코드>가 <문제 설명>을 정확히 해결하는지 평가합니다.",
         "   - 논리적 오류, 조건 처리 오류, 엣지 케이스 미처리 등의 문제점을 분석합니다.",
-        
+
         "2. **정답에 가까워질 수 있도록 개선 방향 제공**",
         "   - <풀이 코드>가 틀렸다면, **어떤 부분이 잘못되었는지 분석하고, 올바르게 수정할 방향을 한 문단으로 설명해야 합니다.**",
         "   - 단순히 '오답 발생'이라고 하지 말고, **어떤 개념이 부족한지, 어떤 논리적 오류가 있는지를 구체적으로 서술해야 합니다.**",
-        
+
         "3. **최적화 필요 시 개선 방향 제공**",
         "   - 코드가 동작하지만 비효율적이라면, **시간 복잡도 및 공간 복잡도를 고려한 개선 방법을 한 문단으로 제안합니다.**",
         "   - 예를 들어, '현재 O(N^2) 복잡도를 가지므로 이진 탐색을 활용하면 O(log N)으로 개선 가능합니다.' 와 같이 작성해야 합니다.",
-        
+
         "4. **가독성 피드백은 필요할 경우에만 제공**",
         "   - 코드가 **정확하지 않다면**, 가독성 피드백은 제공하지 않습니다. (정확성을 먼저 해결해야 함)",
         "   - 코드가 정확하게 동작하는 경우에만, 변수명 개선, 함수 구조 개선 등의 피드백을 한 문단으로 추가할 수 있습니다.",
-        
-        "5. **잘못된 피드백 제공 방지**",
-        "   - 제목과 내용이 일치하지 않도록 발생하는 오류를 방지해야 합니다.",
-        "   - **제목은 반드시 피드백 내용과 정확히 일치해야 합니다.**",
-        "   - 이미 해결된 피드백이나 불필요한 피드백(예: '이 부분은 잘 작성되었습니다')은 출력하지 않습니다.",
-        
-        "6. **불필요한 마무리 문구 생성 금지**",
-        "   - '이와 같은 개선을 통해 문제를 더 효율적으로 해결할 수 있습니다.' 같은 마무리 문장을 절대 출력하지 않습니다.",
-        "   - '이 개선을 통해 코드는 더 효율적이며, 큰 입력에서도 성능을 유지할 수 있습니다.' 같은 마무리 문장을 절대 출력하지 않습니다.",
-        "   - 피드백 내용 이후에 '따라서', '결론적으로', '이로 인해', '이러한 개선을 통해' 등의 문구를 포함한 마무리 문장을 절대 포함하지 않습니다.",
-        "   - **오직 코드 리뷰 항목만 제공하며, 최종적으로 요약하거나 결론을 내리지 않습니다.**",
-        
-        "7. **하위 카테고리(-) 사용 금지**",
-        "   - 코드 리뷰 내용에서 '- 내용 추가' 방식으로 하위 카테고리를 추가하지 않습니다.",
-        "   - 코드 리뷰 내용은 **한 개의 문단으로 유지하며**, 여러 개의 세부 항목으로 분리하지 않습니다.",
-        
-        "## ✅ 출력 형식:",
-        "출력 형식은 반드시 아래의 규칙을 따라야 합니다.",
-        
+
+        "5. **피드백 제목과 내용 일관성 유지**",
+        "   - `<Content>` 태그에는 반드시 **명확한 피드백 제목**만 포함해야 합니다.",
+        "   - **문장형 표현(예: '시간 복잡도 개선이 필요합니다.') 대신, 간결한 제목(예: '시간 복잡도 문제로 인해 비효율적임')을 사용해야 합니다.**",
+        "   - **예시:**",
+        "     - (잘못된 예) `<Content>시간 복잡도 개선이 필요합니다.</Content>` ❌ (문장형 표현 금지)",
+        "     - (올바른 예) `<Content>시간 복잡도 문제로 인해 비효율적임</Content>` ✅ (제목형 표현)",
+
+        "6. **출력 형식 준수**",
         """
         <Title> 가장 중요한 코드 리뷰 내용을 한 줄 요약합니다.</Title>
 
         <Review>
-        <Content>코드 리뷰 제목</Content>
+        <Content>피드백 제목 (명확한 키워드 사용)</Content>
         <Detail>코드 리뷰 내용 및 상세 설명 (한 문단으로 작성)</Detail>
 
-        <Content>코드 리뷰 제목</Content>
+        <Content>피드백 제목 (명확한 키워드 사용)</Content>
         <Detail>코드 리뷰 내용 및 상세 설명 (한 문단으로 작성)</Detail>
 
-        <Content>코드 리뷰 제목</Content>
+        <Content>피드백 제목 (명확한 키워드 사용)</Content>
         <Detail>코드 리뷰 내용 및 상세 설명 (한 문단으로 작성)</Detail>
         </Review>
         """,
 
-        "## ✅ 출력 형식 규칙:",
+        "7. **출력 형식 규칙 준수**",
         "- **각 코드 리뷰 제목은 핵심적인 알고리즘 개념 및 코드 오류를 반영해야 합니다.**",
-        "- 단순히 **'오답 발생'** 같은 표현 대신, **'DFS 탐색 방향 오류로 인해 정답을 찾지 못함'**처럼 구체적인 내용을 포함해야 합니다.",
-        "- **코드가 틀렸다면, 정답을 맞출 수 있도록 실질적인 수정 방향을 한 문단으로 제공해야 합니다.**",
-        "- **이미 해결된 피드백은 출력하지 않아야 합니다.** ('이 피드백은 해결되었습니다' 같은 문구도 금지)",
-        "- **가독성 개선 피드백은 코드가 정답을 도출하는 경우에만 제공하며, 불필요한 가독성 피드백은 금지합니다.**",
+        "- **'오답 발생' 같은 표현 대신, 'DFS 탐색 방향 오류로 인해 정답을 찾지 못함'처럼 구체적인 내용을 포함해야 합니다.**",
         "- **출력의 마지막에 불필요한 결론 요약(예: '따라서', '결론적으로')을 포함하지 않습니다.**",
-        "- **'이와 같은 개선을 통해 문제를 더 효율적으로 해결할 수 있습니다.' 같은 마무리 문장을 출력하지 않도록 주의해야 합니다.**",
-        "- **코드 리뷰 항목 외에는 불필요한 부가 설명을 출력하지 말고, 오직 핵심 리뷰 내용만 유지해야 합니다.**",
-        "- **모든 코드 리뷰 내용은 반드시 한 문단으로 작성해야 하며, 하위 카테고리('- 내용 추가')를 포함해서는 안 됩니다.**",
+        "- **가독성 개선 피드백은 코드가 정답을 도출하는 경우에만 제공하며, 불필요한 가독성 피드백은 금지합니다.**",
         "- **출력 형식에서 `<Review>` 태그를 최상위 컨테이너로 유지하며, 각각의 코드 리뷰는 `<Content>`와 `<Detail>`을 사용하여 표현해야 합니다.**"
     ]
 
@@ -416,17 +401,17 @@ def generate_review(prob,source_code) :
 
     content_response = chat_with_gpt(user_input, review_content)
 
-        # 정규 표현식을 사용하여 <Content>와 <Detail> 태그 안의 내용을 추출
-    contents = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
-    details = re.findall(r'<Detail>(.*?)</Detail>', content_response, re.DOTALL)
+    # 🔹 정규 표현식에서 대소문자를 무시하도록 `(?i)` 추가
+    contents = re.findall(r'(?i)<content>(.*?)</content>', content_response, re.DOTALL)
+    details = re.findall(r'(?i)<detail>(.*?)</detail>', content_response, re.DOTALL)
 
-    # [[<Content>, <Detail>], [<Content>, <Detail>], ...] 형태로 리스트 생성
+    # [[<content>, <detail>], [<content>, <detail>], ...] 형태로 리스트 생성
     result = [[content.strip(), detail.strip()] for content, detail in zip(contents, details)]
 
     # 각 번호별 내용을 저장할 리스트
     title_list = []
 
-    title_list = re.findall(r'<Content>(.*?)</Content>', content_response, re.DOTALL)
+    title_list = re.findall(r'(?i)<content>(.*?)</content>', content_response, re.DOTALL)
 
     maybe_feedback = []
     line_content = lines_system_prompt()
@@ -711,32 +696,23 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
     user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + index_code + "\n" + "<FINAL_LIST>" + final_feedback
     code_response = chat3_with_gpt(user_input3,solution_prompt)
 
-    # 🔹 정규식을 사용하여 Python 코드 (solution_code) 추출
-    # - 첫 번째 백틱이 없는 경우도 처리할 수 있도록 수정
-    code_match = re.search(r"(?:```python\n|python\n)(.*?)(?:\n```|\n<lines>)", code_response, re.DOTALL)
-    solution_code = code_match.group(1).strip() if code_match else ""
+    # 🔹 프로그래밍 코드 추출 (XML 시작 전까지 텍스트를 코드로 간주)
+    code_match = re.search(r"^(.*?)(?=\n<lines>)", response, re.DOTALL)
+    solution_code = code_match.group(1).strip() if code_match else "No Code Found"
 
-    # 🔹 정규식을 사용하여 XML 데이터 (solution_xml) 추출
-    xml_match = re.search(r"<lines>(.*?)</lines>", code_response, re.DOTALL)
-    solution_xml = f"<lines>{xml_match.group(1)}</lines>" if xml_match else ""
+    # 🔹 XML 데이터 추출
+    xml_match = re.search(r"<lines>(.*?)</lines>", response, re.DOTALL)
+    solution_xml = f"<lines>{xml_match.group(1)}</lines>" if xml_match else "No Lines Found"
 
     # 🔹 XML을 파싱하여 solution_list 생성
     solution_list = []
-    if solution_xml:
+    if "No Lines Found" not in solution_xml:  # XML 데이터가 존재하는 경우만 처리
         root = ET.fromstring(solution_xml)
         for line in root.findall(".//line"):
             title = line.find("title").text
             start_line = int(line.find("start_line").text)
             end_line = int(line.find("end_line").text)
-            solution_list.append([title, start_line, end_line]) 
-
-    # 🔹 결과 출력
-    print("=== Extracted Solution Code ===")
-    print(solution_code)
-    print("\n=== Extracted XML (solution_list) ===")
-    print(solution_list)
-
-    
+            solution_list.append([title, start_line, end_line])
 
     return solution_code, solution_list
 
