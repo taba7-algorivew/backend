@@ -73,49 +73,46 @@ def get_history(request, history_id) :
         status=status.HTTP_200_OK,
     )
 
-#[POST] /api/v1/review
+# [POST] /api/v1/review
 @api_view(["POST"])
 def generate_review(request):
     # POST 데이터 처리
-    data= request.data
-    problem_id= data["problem_id"]
-    problem_info = data["problem_info"]
-    user_id= int(data["user_id"])
-    user= AlgoReviewUser.objects.get(id= user_id)
-    source_code= data["source_code"]
-    
+    data = request.data
+    problem_id = data.get("problem_id")
+    problem_info = data.get("problem_info")
+    user_id = int(data.get("user_id"))
+    user = AlgoReviewUser.objects.get(id=user_id)
+    source_code = data.get("source_code")
+
     #############################################################
-    #                       URL 또는 이미지                      #
-    #                         데이터 처리                        #
+    #                      URL 또는 이미지 처리                 #
     #############################################################
-    problem= None
-    # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
-    if not problem_id :
-        input_source= data["input_source"]
-        input_data= data["input_data"]
-        # URL에 대한 처리
-        if input_source == "url" :
-            problem_data= get_the_url(input_data)
-        # 이미지에 대한 처리
-        else :
-            problem_data= get_info_img(input_data)
-        # 처리 결과 다루기
-        if problem_data["status"] == True :
-            # 문제 생성, 이 부분은 수정해야할 수 있습니다. 리뷰 생성 실패 시 데이터 삭제를 고려해야할 수 있습니다.
-            name= problem_data["title"][:20]
-            problem= Problem.objects.create(
-                name= name,
-                title= problem_data["title"],
-                content= problem_data["content"]
+    problem = None
+    if not problem_id:
+        input_source = data.get("input_source")
+        input_data = data.get("input_data")
+
+        if input_source == "url":
+            problem_data = get_the_url(input_data)
+        else:
+            problem_data = get_info_img(input_data)
+
+        if problem_data.get("status"):
+            name = problem_data["title"][:20]
+            problem = Problem.objects.create(
+                name=name,
+                title=problem_data["title"],
+                content=problem_data["content"]
             )
-            
-    else :
-        problem= Problem.objects.filter(id= problem_id).first()
-    
-    if problem is not None:
-        prob = f"{problem.title}\n{problem.content}"
+        else:
+            return Response({"detail": "문제 정보를 가져오는 데 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
     else:
-        raise AssertionError
+        problem = Problem.objects.filter(id=problem_id).first()
+
+    if not problem:
+        return Response({"detail": "해당 문제를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    prob = f"{problem.title}\n{problem.content}"
 
     #############################################################
     #                        코드 리뷰 생성                      #
@@ -124,52 +121,50 @@ def generate_review(request):
     final_list = generate_ai_review(prob, source_code, reviews)
 
     # 히스토리 생성
-    history= History.objects.create(
-        user_id= user,
-        problem_id= problem,
-        name= "name",
-        type= 1, # api를 통해 파악해야 할 컬럼
-        source_code= source_code,
+    history = History.objects.create(
+        user_id=user,
+        problem_id=problem,
+        name="",  # 리뷰 생성 후 첫 번째 리뷰 타이틀로 업데이트 예정
+        type=1,
+        source_code=source_code,
     )
 
-    # "problem_info" : prob
     return_data = {
         "history_id": history.id,
-        "history_name": None, # 리뷰 정제 후 지정
+        "history_name": None,  # 리뷰 생성 후 지정
         "problem_id": problem.id,
+        "problem_name": problem.name,
         "problem_info": problem.content,
         "reviews": []
     }
 
     for review in final_list:
-        title= review[0]
-        comments= review[1]
-        start_line_number= review[2]
-        end_line_number = review[3]
-        is_passed = review[4]
-        review_row= Review.objects.create(
-            history_id= history,
-            title= title,
-            content= comments,
-            start_line_number= start_line_number,
-            end_line_number= end_line_number,
-            is_passed = is_passed
+        title, comments, start_line_number, end_line_number, is_passed = review
+
+        review_row = Review.objects.create(
+            history_id=history,
+            title=title,
+            content=comments,
+            start_line_number=start_line_number,
+            end_line_number=end_line_number,
+            is_passed=is_passed
         )
+
         review_data = {
-            #"review_id": review_row.id,
             "id": review_row.id,
-            "title": review[0],
-            "comments": review[1],
-            "start_line_number": review[2],
-            "end_line_number": review[3],
-            "is_passed": review[4]
+            "title": title,
+            "comments": comments,
+            "start_line_number": start_line_number,
+            "end_line_number": end_line_number,
+            "is_passed": is_passed
         }
         return_data["reviews"].append(review_data)
 
-        # 히스토리 이름 지정
-        history.name= return_data["reviews"][0]["title"] #리뷰의 첫번째 타이틀
+    # 히스토리 이름 지정 (첫 번째 리뷰 타이틀 사용)
+    if return_data["reviews"]:
+        history.name = return_data["reviews"][0]["title"]
         history.save()
-        return_data["history_name"]= history.name
+        return_data["history_name"] = history.name
 
     return Response(return_data, status=status.HTTP_201_CREATED)
 
