@@ -3,10 +3,12 @@ import re
 import openai
 import os
 import json
+import xml.etree.ElementTree as ET
+from django.conf import settings
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("Missing OPENAI_API_KEY environment variable.")
+# settings.py에서 API 키 불러오기
+OPENAI_API_KEY = settings.OPENAI_API_KEY
+GENAI_API_KEY = settings.GENAI_API_KEY
 
 client = openai.Client(api_key=OPENAI_API_KEY)
 
@@ -627,35 +629,52 @@ def generate_chatbot(request_data: dict) -> str:
 
 def solution_system_prompt () :
     final_content = [
-        "당신은 코드 개선을 전문으로 하는 AI 엔지니어입니다.",
-        "사용자가 제공한 코드(<code>)는 <prob>을 해결하기 위해 작성된 풀이 코드입니다.",
-        "사용자는 FINAL_LIST에 포함된 피드백을 바탕으로 <code>를 개선하여 최적의 성능과 가독성을 갖춘 최종 모범 코드(Final Code)를 원합니다.",
-
+        "당신은 코드 최적화를 전문으로 하는 AI 엔지니어입니다.",
+        "사용자가 제공한 코드(<code>)는 <prob>을 해결하기 위해 작성되었습니다.",
+        "사용자는 FINAL_LIST의 피드백을 반영하여 최적화된 최종 코드(Final Code)를 원합니다.",
+        
         "## 입력 데이터 설명",
-        "1. <문제 설명> : 유저가 해결해야 할 문제의 설명입니다.",
-        "2. <풀이 코드> : 유저가 문제를 해결하기 위해 작성한 코드입니다.",
-        """3. <FINAL_LIST> :
-        - 형식: `[피드백 제목, 피드백 내용, 시작 줄 번호, 끝 줄 번호]`",
-        - 이 리스트는 코드에서 개선이 필요한 부분과 수정 방향을 제공합니다.",
-        - 각 피드백 항목은 특정 코드 영역(시작 줄 ~ 끝 줄)에 해당하므로, 해당 코드 영역을 수정해야 합니다.""",
-
-        """## 코드 개선 방식
-        1. **FINAL_LIST에 제공된 피드백을 기반으로 필요한 부분만 수정**,
-        - 피드백이 적용되는 줄 번호(시작 줄 ~ 끝 줄)를 기준으로 해당 부분을 변경합니다.,
-        - 피드백을 반영하되, **기존 코드의 구조와 논리는 유지**합니다.""",
-
-        """2. **코드의 가독성과 성능을 최적화**
-        - 불필요한 반복문 제거, 알고리즘 최적화, 변수명 개선 등을 수행합니다.,
-        - 코드의 유지보수성을 높이기 위해 주석을 추가할 수 있습니다.""",
-
-        """3. **불필요한 변경을 하지 않음**,
-        - 피드백에 언급되지 않은 코드 부분은 변경하지 않습니다.,
-        - 코드의 스타일과 논리를 유지하면서, 오직 필요한 부분만 수정합니다.""",
-
-        """## 출력 형식
-        최종적으로 개선된 코드(Final Code)만 출력해야 합니다.,
-        Final Code는 사용자의 기존 코드(code)에서 필요한 부분만 변경한 최적의 버전이어야 합니다.,
-        불필요한 설명이나 추가 주석 없이, 수정된 코드만 출력합니다."""
+        "1. <문제 설명>: 문제의 설명이 포함됩니다.",
+        "2. <풀이 코드>: 사용자가 작성한 기존 코드입니다.",
+        "3. <FINAL_LIST>: 코드에서 개선이 필요한 부분과 수정 방향을 제공합니다.",
+        """   - 형식: `[피드백 제목, 피드백 내용, 시작 줄 번호, 끝 줄 번호]`",
+            - '시작 줄 번호'와 '끝 줄 번호'는 **기존 코드에서 수정이 필요한 영역을 지정**합니다.""",
+        
+        "## 코드 수정 지침",
+        "1. **FINAL_LIST의 피드백을 반영하여 필요한 부분만 변경**",
+        """   - 피드백에 지정된 줄 번호(시작 줄 ~ 끝 줄)를 기준으로 수정합니다.",
+            - **단, 최적화된 코드에서 수정된 줄 번호는 기존 코드와 다를 수 있습니다.**",
+            - 최적화 과정에서 **줄 수가 변경될 경우 새로운 줄 번호를 자동으로 반영**해야 합니다.""",
+        
+        "2. **코드 성능과 가독성 개선**",
+        """   - 불필요한 변수 및 중복 로직을 제거하고, 최적의 알고리즘을 적용합니다.",
+            - 코드의 유지보수성을 높이기 위해 가독성을 고려합니다.""",
+        
+        "3. **불필요한 변경은 하지 않음**",
+        """   - 피드백이 없는 코드 부분은 변경하지 않습니다.",
+            - 코드 스타일을 불필요하게 변경하지 않고, 원래의 흐름을 유지합니다.""",
+        
+        "## 출력 형식",
+        "최적화된 최종 코드만 출력해야 합니다.",
+        "출력 형식은 다음과 같습니다:",
+        """
+        <code>
+        최적화된 코드
+        </code>
+        <lines>
+            <line>
+                <title>피드백 제목</title>
+                <start_line>최적화된 코드에서의 시작 줄 번호</start_line>
+                <end_line>최적화된 코드에서의 끝 줄 번호</end_line>
+            </line>
+            <line>
+                <title>피드백 제목</title>
+                <start_line>최적화된 코드에서의 시작 줄 번호</start_line>
+                <end_line>최적화된 코드에서의 끝 줄 번호</end_line>
+            </line>
+            ...
+        </lines>
+        """
     ]
 
     return final_content
@@ -686,19 +705,39 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
     final_feedback = f'"""{json.dumps(final_list)}"""'
 
     prob = problem_info
+    index_code = generate_index_code(source_code)
 
     solution_prompt = solution_system_prompt ()
-    user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + source_code + "\n" + "<FINAL_LIST>" + final_feedback
+    user_input3 = "<문제 설명>" + prob + "\n" + "<풀이 코드>" + index_code + "\n" + "<FINAL_LIST>" + final_feedback
     code_response = chat3_with_gpt(user_input3,solution_prompt)
 
-    code_response = code_response.strip().strip("```")
-    def_index = code_response.find("def")
-    if def_index != -1:
-        code_response = code_response[def_index:]
-    
-    # Remove any trailing backticks or whitespace
-    code_response = code_response.strip().strip("```").strip()
+    # 🔹 정규식을 사용하여 Python 코드 (solution_code) 추출
+    # - 첫 번째 백틱이 없는 경우도 처리할 수 있도록 수정
+    code_match = re.search(r"(?:```python\n|python\n)(.*?)(?:\n```|\n<lines>)", code_response, re.DOTALL)
+    solution_code = code_match.group(1).strip() if code_match else ""
 
-    return code_response
+    # 🔹 정규식을 사용하여 XML 데이터 (solution_xml) 추출
+    xml_match = re.search(r"<lines>(.*?)</lines>", code_response, re.DOTALL)
+    solution_xml = f"<lines>{xml_match.group(1)}</lines>" if xml_match else ""
+
+    # 🔹 XML을 파싱하여 solution_list 생성
+    solution_list = []
+    if solution_xml:
+        root = ET.fromstring(solution_xml)
+        for line in root.findall(".//line"):
+            title = line.find("title").text
+            start_line = int(line.find("start_line").text)
+            end_line = int(line.find("end_line").text)
+            solution_list.append([title, start_line, end_line]) 
+
+    # 🔹 결과 출력
+    print("=== Extracted Solution Code ===")
+    print(solution_code)
+    print("\n=== Extracted XML (solution_list) ===")
+    print(solution_list)
+
+    
+
+    return solution_code, solution_list
 
 
