@@ -28,3 +28,8 @@ class Review(models.Model) :
 class Solution(models.Model) :
     problem_id= models.ForeignKey(Problem, on_delete=models.CASCADE)
     solution_code= models.TextField()
+
+class SolutionLine(models.Model):
+    solution_id = models.ForeignKey(Solution, on_delete=models.CASCADE, related_name="solution_lines")
+    start_line_number = models.SmallIntegerField()
+    end_line_number = models.SmallIntegerField()

@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from datetime import datetime
-from .models import History, Review, Problem, Solution
+from .models import History, Review, Problem, Solution, SolutionLine
 from user_auth.models import AlgoReviewUser
 from .ai_module import generate_ai_review, generate_chatbot, generate_solution_code  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
@@ -73,49 +73,46 @@ def get_history(request, history_id) :
         status=status.HTTP_200_OK,
     )
 
-#[POST] /api/v1/review
+# [POST] /api/v1/review
 @api_view(["POST"])
 def generate_review(request):
     # POST 데이터 처리
-    data= request.data
-    problem_id= data["problem_id"]
-    problem_info = data["problem_info"]
-    user_id= int(data["user_id"])
-    user= AlgoReviewUser.objects.get(id= user_id)
-    source_code= data["source_code"]
-    
+    data = request.data
+    problem_id = data.get("problem_id")
+    problem_info = data.get("problem_info")
+    user_id = int(data.get("user_id"))
+    user = AlgoReviewUser.objects.get(id=user_id)
+    source_code = data.get("source_code")
+
     #############################################################
-    #                       URL 또는 이미지                      #
-    #                         데이터 처리                        #
+    #                      URL 또는 이미지 처리                 #
     #############################################################
-    problem= None
-    # 문제에 대한 정보가 없는 경우에만 문제에 대한 정보 파악
-    if not problem_id :
-        input_source= data["input_source"]
-        input_data= data["input_data"]
-        # URL에 대한 처리
-        if input_source == "url" :
-            problem_data= get_the_url(input_data)
-        # 이미지에 대한 처리
-        else :
-            problem_data= get_info_img(input_data)
-        # 처리 결과 다루기
-        if problem_data["status"] == True :
-            # 문제 생성, 이 부분은 수정해야할 수 있습니다. 리뷰 생성 실패 시 데이터 삭제를 고려해야할 수 있습니다.
-            name= problem_data["title"][:20]
-            problem= Problem.objects.create(
-                name= name,
-                title= problem_data["title"],
-                content= problem_data["content"]
+    problem = None
+    if not problem_id:
+        input_source = data.get("input_source")
+        input_data = data.get("input_data")
+
+        if input_source == "url":
+            problem_data = get_the_url(input_data)
+        else:
+            problem_data = get_info_img(input_data)
+
+        if problem_data.get("status"):
+            name = problem_data["title"][:20]
+            problem = Problem.objects.create(
+                name=name,
+                title=problem_data["title"],
+                content=problem_data["content"]
             )
-            
-    else :
-        problem= Problem.objects.filter(id= problem_id).first()
-    
-    if problem is not None:
-        prob = f"{problem.title}\n{problem.content}"
+        else:
+            return Response({"detail": "문제 정보를 가져오는 데 실패했습니다."}, status=status.HTTP_400_BAD_REQUEST)
     else:
-        raise AssertionError
+        problem = Problem.objects.filter(id=problem_id).first()
+
+    if not problem:
+        return Response({"detail": "해당 문제를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    prob = f"{problem.title}\n{problem.content}"
 
     #############################################################
     #                        코드 리뷰 생성                      #
@@ -124,52 +121,50 @@ def generate_review(request):
     final_list = generate_ai_review(prob, source_code, reviews)
 
     # 히스토리 생성
-    history= History.objects.create(
-        user_id= user,
-        problem_id= problem,
-        name= "name",
-        type= 1, # api를 통해 파악해야 할 컬럼
-        source_code= source_code,
+    history = History.objects.create(
+        user_id=user,
+        problem_id=problem,
+        name="",  # 리뷰 생성 후 첫 번째 리뷰 타이틀로 업데이트 예정
+        type=1,
+        source_code=source_code,
     )
 
-    # "problem_info" : prob
     return_data = {
         "history_id": history.id,
-        "history_name": None, # 리뷰 정제 후 지정
+        "history_name": None,  # 리뷰 생성 후 지정
         "problem_id": problem.id,
+        "problem_name": problem.name,
         "problem_info": problem.content,
         "reviews": []
     }
 
     for review in final_list:
-        title= review[0]
-        comments= review[1]
-        start_line_number= review[2]
-        end_line_number = review[3]
-        is_passed = review[4]
-        review_row= Review.objects.create(
-            history_id= history,
-            title= title,
-            content= comments,
-            start_line_number= start_line_number,
-            end_line_number= end_line_number,
-            is_passed = is_passed
+        title, comments, start_line_number, end_line_number, is_passed = review
+
+        review_row = Review.objects.create(
+            history_id=history,
+            title=title,
+            content=comments,
+            start_line_number=start_line_number,
+            end_line_number=end_line_number,
+            is_passed=is_passed
         )
+
         review_data = {
-            #"review_id": review_row.id,
             "id": review_row.id,
-            "title": review[0],
-            "comments": review[1],
-            "start_line_number": review[2],
-            "end_line_number": review[3],
-            "is_passed": review[4]
+            "title": title,
+            "comments": comments,
+            "start_line_number": start_line_number,
+            "end_line_number": end_line_number,
+            "is_passed": is_passed
         }
         return_data["reviews"].append(review_data)
 
-        # 히스토리 이름 지정
-        history.name= return_data["reviews"][0]["title"] #리뷰의 첫번째 타이틀
+    # 히스토리 이름 지정 (첫 번째 리뷰 타이틀 사용)
+    if return_data["reviews"]:
+        history.name = return_data["reviews"][0]["title"]
         history.save()
-        return_data["history_name"]= history.name
+        return_data["history_name"] = history.name
 
     return Response(return_data, status=status.HTTP_201_CREATED)
 
@@ -222,14 +217,23 @@ def solution_view(request, problem_id):
         if solution:
             is_created = True
             solution_code = solution.solution_code
+
+            # SolutionLine 테이블에서 관련 라인 정보 추출 및 정렬
+            lines = SolutionLine.objects.filter(solution_id=solution)
+            lines_list = [
+                {"start_line_number": line.start_line_number, "end_line_number": line.end_line_number}
+                for line in lines
+            ]
         else:
             is_created = False
             solution_code = ""
+            lines_list = []
 
         # 응답 데이터 구성
         return_data = {
             "is_created": is_created,
-            "solution_code": solution_code
+            "solution_code": solution_code,
+            "lines": lines_list
         }
 
         return Response(return_data, status=status.HTTP_200_OK)
@@ -240,27 +244,39 @@ def solution_view(request, problem_id):
         source_code = request.data.get("source_code")
         reviews = request.data.get("reviews", [])
 
-        # 기존에 생성된 Solution이 있는지 확인
-        existing_solution = Solution.objects.filter(problem_id=problem_id).first()
-        if existing_solution:
-            return Response({
-                "detail": "모범 답안이 이미 생성되었습니다.",
-                "solution_code": existing_solution.solution_code
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # 기존에 생성된 Solution이 있는지 확인 (예외처리 제거 또는 간소화)
+        if Solution.objects.filter(problem_id=problem_id).exists():
+            return Response({"detail": "모범 답안이 이미 생성되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # AI 모듈을 사용하여 Solution 코드 생성
-        solution_code = generate_solution_code(problem_info, source_code, reviews)
+        # AI 모듈을 사용하여 Solution 코드 및 라인 생성
+        solution_code, lines = generate_solution_code(problem_info, source_code, reviews)
 
-        # Solution 모델에 저장
-        Solution.objects.create(
+        # Solution 테이블에 저장
+        solution = Solution.objects.create(
             problem_id=problem,
             solution_code=solution_code
         )
 
-        # POST 요청 시 solution_code만 반환
-        return Response({
-            "solution_code": solution_code
-        }, status=status.HTTP_201_CREATED)
+        # SolutionLine 테이블에 각 라인 정보 저장
+        line_entries = [
+            SolutionLine(
+                solution_id=solution,
+                start_line_number=start_line_number,
+                end_line_number=end_line_number
+            ) for _, start_line_number, end_line_number in lines
+        ]
+        SolutionLine.objects.bulk_create(line_entries)
+
+        # 응답 데이터 구성
+        response_data = {
+            "solution_code": solution_code,
+            "lines": [
+                {"start_line_number": start_line_number, "end_line_number": end_line_number}
+                for _, start_line_number, end_line_number in lines
+            ]
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 # [POST] /api/v1/chatbot
 @api_view(["POST"])
@@ -274,3 +290,50 @@ def chatbot(request) :
             {"error": f"Internal Server Error: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+# [GET] /api/v1/histories/{problem_id}/first-review
+@api_view(["GET"])
+def get_first_review(request, problem_id):
+    """
+    코드 리뷰의 최초 의뢰 기록 조회 API
+
+    - problem_id로 history 테이블 필터링
+    - created_at을 기준으로 오름차순 정렬하여 첫 번째 레코드의 history_id와 source_code 가져오기
+    - 해당 history_id로 review 테이블에서 start_line_number, end_line_number 가져오기
+    - 요청 성공 시 최초 코드 및 리뷰 라인 정보 반환
+
+    응답 형식:
+    {
+        "first_code": "코드 문자열",
+        "lines": [
+            {"start_line_number": int, "end_line_number": int},
+            ...
+        ]
+    }
+    """
+    # problem_id를 기반으로 history 레코드 조회
+    first_history = (
+        History.objects
+        .filter(problem_id=problem_id, is_deleted=False)
+        .order_by("created_at")
+        .first()
+    )
+
+    if not first_history:
+        return Response({"detail": "해당 문제의 히스토리를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    # 해당 history_id로 review 레코드 조회
+    reviews = Review.objects.filter(history_id=first_history.id)
+
+    # 리뷰 라인 정보 추출
+    lines = [
+        {"start_line_number": review.start_line_number, "end_line_number": review.end_line_number}
+        for review in reviews
+    ]
+
+    response_data = {
+        "first_code": first_history.source_code,
+        "lines": lines
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
