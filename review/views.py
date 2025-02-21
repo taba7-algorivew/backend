@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from datetime import datetime
-from .models import History, Review, Problem, Solution
+from .models import History, Review, Problem, Solution, SolutionLine
 from user_auth.models import AlgoReviewUser
 from .ai_module import generate_ai_review, generate_chatbot, generate_solution_code  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
@@ -222,14 +222,23 @@ def solution_view(request, problem_id):
         if solution:
             is_created = True
             solution_code = solution.solution_code
+
+            # SolutionLine 테이블에서 관련 라인 정보 추출 및 정렬
+            lines = SolutionLine.objects.filter(solution_id=solution)
+            lines_list = [
+                {"start_line_number": line.start_line_number, "end_line_number": line.end_line_number}
+                for line in lines
+            ]
         else:
             is_created = False
             solution_code = ""
+            lines_list = []
 
         # 응답 데이터 구성
         return_data = {
             "is_created": is_created,
-            "solution_code": solution_code
+            "solution_code": solution_code,
+            "lines": lines_list
         }
 
         return Response(return_data, status=status.HTTP_200_OK)
@@ -240,27 +249,39 @@ def solution_view(request, problem_id):
         source_code = request.data.get("source_code")
         reviews = request.data.get("reviews", [])
 
-        # 기존에 생성된 Solution이 있는지 확인
-        existing_solution = Solution.objects.filter(problem_id=problem_id).first()
-        if existing_solution:
-            return Response({
-                "detail": "모범 답안이 이미 생성되었습니다.",
-                "solution_code": existing_solution.solution_code
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # 기존에 생성된 Solution이 있는지 확인 (예외처리 제거 또는 간소화)
+        if Solution.objects.filter(problem_id=problem_id).exists():
+            return Response({"detail": "모범 답안이 이미 생성되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # AI 모듈을 사용하여 Solution 코드 생성
-        solution_code = generate_solution_code(problem_info, source_code, reviews)
+        # AI 모듈을 사용하여 Solution 코드 및 라인 생성
+        solution_code, lines = generate_solution_code(problem_info, source_code, reviews)
 
-        # Solution 모델에 저장
-        Solution.objects.create(
+        # Solution 테이블에 저장
+        solution = Solution.objects.create(
             problem_id=problem,
             solution_code=solution_code
         )
 
-        # POST 요청 시 solution_code만 반환
-        return Response({
-            "solution_code": solution_code
-        }, status=status.HTTP_201_CREATED)
+        # SolutionLine 테이블에 각 라인 정보 저장
+        line_entries = [
+            SolutionLine(
+                solution_id=solution,
+                start_line_number=start_line_number,
+                end_line_number=end_line_number
+            ) for _, start_line_number, end_line_number in lines
+        ]
+        SolutionLine.objects.bulk_create(line_entries)
+
+        # 응답 데이터 구성
+        response_data = {
+            "solution_code": solution_code,
+            "lines": [
+                {"start_line_number": start_line_number, "end_line_number": end_line_number}
+                for _, start_line_number, end_line_number in lines
+            ]
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 # [POST] /api/v1/chatbot
 @api_view(["POST"])
