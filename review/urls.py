@@ -8,6 +8,7 @@ from .views import (
     solution_view,
     handle_problem, 
     hello_algoreview,
+    get_first_review,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path("solution/<int:problem_id>", solution_view, name="solution_view"),
     path("history/<int:history_id>", handle_history, name="handle_history"),
     path("problem/<int:problem_id>", handle_problem, name="handle_problem"),
+    path("histories/<int:problem_id>/first-review", get_first_review, name="get_first_review")
 ]
