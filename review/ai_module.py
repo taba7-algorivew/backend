@@ -4,10 +4,11 @@ import openai
 import os
 import json
 import xml.etree.ElementTree as ET
+from django.conf import settings
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("Missing OPENAI_API_KEY environment variable.")
+# settings.py에서 API 키 불러오기
+OPENAI_API_KEY = settings.OPENAI_API_KEY
+GENAI_API_KEY = settings.GENAI_API_KEY
 
 client = openai.Client(api_key=OPENAI_API_KEY)
 
@@ -727,7 +728,7 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
             title = line.find("title").text
             start_line = int(line.find("start_line").text)
             end_line = int(line.find("end_line").text)
-            solution_list.append([title, start_line, end_line])
+            solution_list.append([title, start_line, end_line]) 
 
     # 🔹 결과 출력
     print("=== Extracted Solution Code ===")
@@ -735,6 +736,8 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
     print("\n=== Extracted XML (solution_list) ===")
     print(solution_list)
 
-    return solution_code,solution_list
+    
+
+    return solution_code, solution_list
 
 
