@@ -683,6 +683,7 @@ def chat3_with_gpt(prompt,solution_prompt):
 
 # 테스트 실행
 
+
 def generate_solution_code(problem_info : str , source_code : str, reviews : list) :
 
     final_list = [(review["title"], review["comments"],review["start_line_number"],review["end_line_number"]) for review in reviews]
@@ -697,7 +698,10 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
 
     # 🔹 프로그래밍 코드 추출 (XML 시작 전까지 텍스트를 코드로 간주)
     code_match = re.search(r"^(.*?)(?=\n<lines>)", code_response, re.DOTALL)
-    solution_code = code_match.group(1).strip() if code_match else "No Code Found"
+    markdown_code = code_match.group(1).strip() if code_match else "No Code Found"
+    middle_lines = markdown_code.splitlines()
+    solution_lines = middle_lines[1:-1]
+    solution_code = "\n".join(solution_lines)
 
     # 🔹 XML 데이터 추출
     xml_match = re.search(r"<lines>(.*?)</lines>", code_response, re.DOTALL)
@@ -709,8 +713,8 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
         root = ET.fromstring(solution_xml)
         for line in root.findall(".//line"):
             title = line.find("title").text
-            start_line = int(line.find("start_line").text)
-            end_line = int(line.find("end_line").text)
+            start_line = int(line.find("start_line").text) - 1
+            end_line = int(line.find("end_line").text) - 1
             solution_list.append([title, start_line, end_line])
 
     return solution_code, solution_list
