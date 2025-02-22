@@ -7,6 +7,7 @@ from user_auth.models import AlgoReviewUser
 from .ai_module import generate_ai_review, generate_chatbot, generate_solution_code  # ai_module에서 함수 불러오기
 from .input_source_precessing import get_the_url, get_info_img
 from django.shortcuts import get_object_or_404
+from django.db.models import Max
 
 #[GET] /api/v1/api : 디버깅용 주소
 @api_view(["GET"])
@@ -56,22 +57,43 @@ def get_histories(request, user_id):
 #[GET] /api/v1/histories/{history_id}
 @api_view(['GET'])
 def get_history(request, history_id) :
-    history= History.objects.filter(id=history_id).first()
-    problem= Problem.objects.filter(id= history.problem_id.id).first()
-    reviews= Review.objects.filter(history_id=history_id).values("id", "title", "content", "start_line_number", "end_line_number", "is_passed")
-    for review in reviews :
-        review["comments"]= review["content"]
-    return_data= {
+    # history 객체 조회 및 예외 처리
+    history = History.objects.filter(id=history_id).first()
+    if not history:
+        return Response({"detail": "해당 히스토리를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    # 관련 problem 조회
+    problem = Problem.objects.filter(id=history.problem_id.id).first()
+    if not problem:
+        return Response({"detail": "연관된 문제를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+    # 해당 history_id에 대한 리뷰 조회 및 데이터 구성
+    reviews = Review.objects.filter(history_id=history_id).values(
+        "id", "title", "content", "start_line_number", "end_line_number", "is_passed"
+    )
+
+    review_list = []
+    for review in reviews:
+        review_list.append({
+            "id": review["id"],
+            "title": review["title"],
+            "comments": review["content"],
+            "start_line_number": review["start_line_number"],
+            "end_line_number": review["end_line_number"],
+            "is_passed": review["is_passed"]
+        })
+
+    # 반환 데이터 구성
+    return_data = {
         "problem_id": problem.id,
         "problem_info": problem.content,
         "source_code": history.source_code,
         "history_id": history.id,
-        "reviews": reviews,
+        "revision": history.revision,
+        "reviews": review_list,
     }
-    return Response(
-        return_data,
-        status=status.HTTP_200_OK,
-    )
+
+    return Response(return_data, status=status.HTTP_200_OK)
 
 # [POST] /api/v1/review
 @api_view(["POST"])
@@ -120,6 +142,10 @@ def generate_review(request):
     reviews = data.get("reviews", [])
     final_list = generate_ai_review(prob, source_code, reviews)
 
+    # 해당 problem_id에 대한 최대 revision 조회 (동시성 및 정확성 보장)
+    max_revision = History.objects.filter(problem_id=problem).aggregate(Max("revision"))["revision__max"]
+    revision_number = (max_revision or 0) + 1  # max_revision이 None일 경우 1부터 시작
+
     # 히스토리 생성
     history = History.objects.create(
         user_id=user,
@@ -127,6 +153,7 @@ def generate_review(request):
         name="",  # 리뷰 생성 후 첫 번째 리뷰 타이틀로 업데이트 예정
         type=1,
         source_code=source_code,
+        revision=revision_number
     )
 
     return_data = {
@@ -135,6 +162,7 @@ def generate_review(request):
         "problem_id": problem.id,
         "problem_name": problem.name,
         "problem_info": problem.content,
+        "revision": history.revision,
         "reviews": []
     }
 

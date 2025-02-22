@@ -14,7 +14,8 @@ class History(models.Model) :
     name= models.CharField(max_length=255)
     type= models.SmallIntegerField()
     source_code= models.TextField()
-    created_at= models.DateTimeField(default=datetime.now())
+    revision = models.PositiveIntegerField(default=1)
+    created_at= models.DateTimeField(default=datetime.now)
     is_deleted= models.BooleanField(default=False)
 
 class Review(models.Model) :
