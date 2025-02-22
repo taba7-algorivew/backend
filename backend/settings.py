@@ -44,6 +44,8 @@ def get_env_var(var_name, secret_name=None, default=None):
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Django 필수 환경 변수 불러오기
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 SECRET_KEY = get_env_var("SECRET_KEY", secret_name="secret_key")
 DEBUG = get_env_var("DEBUG", secret_name="debug_mode", default="False").lower() == "true"
 ALLOWED_HOSTS = get_env_var("ALLOWED_HOSTS", default="*").split(",")
