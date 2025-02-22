@@ -683,8 +683,7 @@ def chat3_with_gpt(prompt,solution_prompt):
 
 # 테스트 실행
 
-
-def generate_solution_code(problem_info : str , source_code : str, reviews : list) -> str :
+def generate_solution_code(problem_info : str , source_code : str, reviews : list) :
 
     final_list = [(review["title"], review["comments"],review["start_line_number"],review["end_line_number"]) for review in reviews]
     final_feedback = f'"""{json.dumps(final_list)}"""'
@@ -697,11 +696,11 @@ def generate_solution_code(problem_info : str , source_code : str, reviews : lis
     code_response = chat3_with_gpt(user_input3,solution_prompt)
 
     # 🔹 프로그래밍 코드 추출 (XML 시작 전까지 텍스트를 코드로 간주)
-    code_match = re.search(r"^(.*?)(?=\n<lines>)", response, re.DOTALL)
+    code_match = re.search(r"^(.*?)(?=\n<lines>)", code_response, re.DOTALL)
     solution_code = code_match.group(1).strip() if code_match else "No Code Found"
 
     # 🔹 XML 데이터 추출
-    xml_match = re.search(r"<lines>(.*?)</lines>", response, re.DOTALL)
+    xml_match = re.search(r"<lines>(.*?)</lines>", code_response, re.DOTALL)
     solution_xml = f"<lines>{xml_match.group(1)}</lines>" if xml_match else "No Lines Found"
 
     # 🔹 XML을 파싱하여 solution_list 생성
