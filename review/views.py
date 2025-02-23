@@ -146,11 +146,12 @@ def generate_review(request):
     max_revision = History.objects.filter(problem_id=problem).aggregate(Max("revision"))["revision__max"]
     revision_number = (max_revision or 0) + 1  # max_revision이 None일 경우 1부터 시작
 
-    # 히스토리 생성
+    # 히스토리 생성 (revision 정보를 포함하여 이름 설정)
+    history_name = f"{revision_number}번째 리뷰"
     history = History.objects.create(
         user_id=user,
         problem_id=problem,
-        name="",  # 리뷰 생성 후 첫 번째 리뷰 타이틀로 업데이트 예정
+        name=history_name,
         type=1,
         source_code=source_code,
         revision=revision_number
@@ -158,7 +159,7 @@ def generate_review(request):
 
     return_data = {
         "history_id": history.id,
-        "history_name": None,  # 리뷰 생성 후 지정
+        "history_name": history.name,
         "problem_id": problem.id,
         "problem_name": problem.name,
         "problem_info": problem.content,
@@ -187,12 +188,6 @@ def generate_review(request):
             "is_passed": is_passed
         }
         return_data["reviews"].append(review_data)
-
-    # 히스토리 이름 지정 (첫 번째 리뷰 타이틀 사용)
-    if return_data["reviews"]:
-        history.name = return_data["reviews"][0]["title"]
-        history.save()
-        return_data["history_name"] = history.name
 
     return Response(return_data, status=status.HTTP_201_CREATED)
 
