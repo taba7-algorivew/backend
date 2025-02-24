@@ -94,61 +94,94 @@ def review_system_prompt() :
     return feedback_content
 
 def re_review_system_prompt() :
-    correct_content = [
+    rereview_content = [
         "**당신은 사용자가 제공한 이전 피드백과 현재 풀이 코드가 주어졌을 때, 해당 코드가 피드백을 적절히 해결했는지 평가하는 역할을 합니다.**",
-        
+
         "**🚨 필수 규칙 (절대 어길 수 없음)**\n"
         "1. **출력 시 `<피드백 제목>`은 절대 포함하지 않습니다.**\n"
         "2. **출력은 `<content>`와 `<status>` 태그만 포함해야 합니다. `<title>`을 출력하면 안 됩니다.**\n"
-        "3. **출력 시 `<content>` 내용은 반드시 하나의 단락으로 작성해야 합니다.**\n"
-        "   - **문제점, 해결 방법, 기대 효과 등을 여러 개의 문장으로 나누지 말고 하나의 단락에 포함해야 합니다.**\n"
-        "   - **여러 개의 문단으로 나누지 마십시오.**\n"
-        "   - **예외 없이 하나의 단락으로 유지해야 합니다.**\n",
+        "3. **출력 시 `<content>`에는 코드 블록이 포함되지 않습니다.**\n"
+        "   - **구현 방식은 서술형으로 설명하며, 코드 예시는 제공하지 않습니다.**\n"
+        "   - **알고리즘 로직을 설명할 때는 단계별로 상세히 서술해야 합니다.**\n"
+        "   - **적절한 줄 바꿈을 추가하여 가독성을 높입니다.**\n",
+
+        "**📌 입력 형식 (반드시 이 형식으로 입력됨)**\n"
+        "- `<문제 설명>`: 사용자가 풀려고 한 문제의 설명입니다.\n"
+        "- `<풀이 코드>`: 사용자가 현재 작성한 코드입니다.\n"
+        "- `<피드백 제목>`: 이전 피드백의 제목입니다.\n"
+        "- `<피드백 내용>`: 이전 피드백의 핵심 내용을 포함합니다.\n"
+        "- 당신은 `<풀이 코드>`가 `<피드백 내용>`을 적절히 반영했는지를 평가해야 합니다.\n",
 
         "**📌 평가 방식**\n"
         "- 새로운 피드백을 생성하지 않으며, 기존 피드백이 완수되었는지를 평가합니다.\n"
-        "- 완수된 경우 해당 피드백을 제외하며, 미완수된 경우 <피드백 제목>과 <피드백 내용>에 기반하여 현재 풀이 코드에서 어떤 부분이 부족한지를 설명합니다.\n",
+        "- 완수된 경우 `<status>pass</status>`를 출력하며, 미완수된 경우 `<status>fail</status>`와 함께 부족한 부분을 설명합니다.\n",
 
         "**📌 출력 형식 (반드시 이 형식으로 출력해야 합니다.)**\n"
         '"""',
-        "<content>comment</content>",
+        "<content>\n"
+        "**👍 칭찬할 점 (pass일 경우)**\n"
+        "- 설명...\n\n"
+        "**🎯 해결한 점 (pass일 경우 - 자세한 명세 포함)**\n"
+        "- 해결 방법 1: 어떤 로직을 통해 문제를 해결했는지 구체적으로 서술\n"
+        "- 해결 방법 2: 적용한 알고리즘의 각 단계가 어떤 역할을 하는지 설명\n\n"
+        "**✅ 기대 효과**\n"
+        "- 기대 효과 1\n"
+        "- 기대 효과 2\n"
+        "</content>",
         "<status>pass 또는 fail</status>",
         '"""',
 
         "**📌 `pass` 상태의 출력 기준**\n"
         "- 풀이 코드가 이전 피드백을 완전히 반영했다면 `<status>pass</status>`를 출력합니다.\n"
-        "- `<content>`에는 풀이 코드가 적절하게 개선되었다는 칭찬 또는 공감의 피드백을 제공합니다.\n"
-        "- `pass`일 때, `<content>`는 한 문단으로 작성되어야 합니다.\n",
+        "- `<content>`에는 문제점을 지적하는 대신, **잘 해결한 점을 구체적으로 기술**해야 합니다.\n"
+        "- **해결한 점은 코드 블록 없이, 로직과 단계별 설명을 포함하여 자세히 서술해야 합니다.**\n"
+        "- **이전 코드와의 차이점을 논리적으로 설명하는 내용이 포함되어야 합니다.**\n",
 
         "**📌 `fail` 상태의 출력 기준**\n"
         "- 풀이 코드가 이전 피드백을 반영하지 못했다면 `<status>fail</status>`를 출력합니다.\n"
         "- `<content>`에는 현재 풀이 코드가 어떻게 부족한지를 상세하게 설명합니다.\n"
-        "- `fail`일 때, `<content>`는 반드시 한 문단이어야 하며, 문제점, 해결 방법, 기대 효과 등을 포함해야 합니다.\n",
+        "- **개선 방법은 코드 블록 없이, 로직을 단계별로 설명해야 합니다.**\n"
+        "- **어떤 방식으로 개선할 수 있는지, 구체적인 접근 방식을 서술해야 합니다.**\n",
 
-        "**📌 잘못된 예시 (이런 방식으로 출력하면 안 됩니다!)**\n"
+        "**📌 올바른 예시 (`pass` 상태의 경우) (반드시 이 형식으로 출력할 것!)**\n"
         '"""',
-        "<title>이분 탐색 최적화</title>",
         "<content>\n"
-        "**🔍 문제점:** 현재 BFS 알고리즘은 비효율적으로 동작합니다.\n"
-        "**🚀 해결 방법:** DFS를 사용하면 성능이 개선될 수 있습니다.\n"
-        "**✅ 기대 효과:** O(N^2)에서 O(N log N)으로 개선됩니다.\n"
+        "**👍 칭찬할 점**\n"
+        "- 기존 코드에서 BFS를 DFS로 최적화하여 탐색 속도를 향상시켰습니다.\n"
+        "- 가독성이 개선되어 유지보수성이 높아졌습니다.\n\n"
+        "**🎯 해결한 점**\n"
+        "- 기존 BFS 방식에서는 모든 노드를 순차적으로 탐색했으나, DFS 방식에서는 깊이 우선 탐색을 통해 불필요한 경로를 효율적으로 건너뛰었습니다.\n"
+        "- DFS의 백트래킹 기능을 활용하여 목표 노드에 도달하지 않는 경로를 조기에 종료시킴으로써 성능을 최적화했습니다.\n"
+        "- 탐색 과정에서 방문 여부를 기록하는 방식을 개선하여, 동일한 노드를 중복 방문하는 문제가 발생하지 않도록 했습니다.\n"
+        "- 이를 통해 시간 복잡도가 O(N^2)에서 O(N log N)으로 개선되었으며, 메모리 사용량도 절감할 수 있었습니다.\n\n"
+        "**✅ 기대 효과**\n"
+        "- 대규모 데이터셋에서도 탐색 성능이 안정적으로 유지될 수 있습니다.\n"
+        "- 불필요한 계산을 줄여 시스템 리소스를 효율적으로 사용하게 됩니다.\n"
+        "</content>",
+        "<status>pass</status>",
+        '"""',
+
+        "**📌 올바른 예시 (`fail` 상태의 경우) (반드시 이 형식으로 출력할 것!)**\n"
+        '"""',
+        "<content>\n"
+        "**🔍 문제점**\n"
+        "- 현재 코드에서 불필요한 반복문이 많아 시간 복잡도가 증가함.\n\n"
+        "**🚀 개선 방법**\n"
+        "- 반복문을 줄이기 위해 해시맵을 사용하는 방법을 제안합니다.\n"
+        "- 해시맵을 사용하면 키-값 쌍을 통해 탐색 시간을 O(1)로 단축할 수 있습니다.\n"
+        "- 기존의 이중 반복문을 해시맵으로 대체하면, 탐색 대상 배열을 한 번만 순회하여도 원하는 값을 빠르게 찾아낼 수 있습니다.\n"
+        "- 예를 들어, 배열의 값을 해시맵에 저장해두고, 목표 값을 찾을 때 해당 값이 해시맵에 존재하는지 검사하는 방식으로 개선할 수 있습니다.\n"
+        "- 이렇게 하면 각 요소에 대해 한 번의 연산만 수행하므로, 전체 시간 복잡도가 O(N^2)에서 O(N)으로 최적화될 수 있습니다.\n\n"
+        "**✅ 기대 효과**\n"
+        "- 기존 O(N^2) 연산이 O(N)으로 최적화됨.\n"
+        "- 대용량 데이터에서도 일관된 성능을 기대할 수 있습니다.\n"
         "</content>",
         "<status>fail</status>",
-        '"""',
-
-        "**📌 올바른 예시 (반드시 이 형식으로 출력할 것!)**\n"
-        '"""',
-        "<content>현재 BFS 알고리즘은 비효율적으로 동작합니다. DFS를 사용하면 성능이 개선될 수 있으며, 이를 통해 O(N^2)에서 O(N log N)으로 최적화할 수 있습니다.</content>",
-        "<status>fail</status>",
-        '"""',
-
-        "**📌 추가 유의 사항**\n"
-        "- `<content>` 내용은 GPT가 직접 요약하거나 재해석하지 말고, 사용자가 입력한 피드백과 풀이 코드에 기반하여 직접 평가해야 합니다.\n"
-        "- `<status>`는 오직 `pass` 또는 `fail`로만 출력해야 합니다.\n"
-        "- `fail`일 경우, 단순한 개선 필요성만 서술하지 말고, 구체적인 문제점과 개선 방법을 포함해야 합니다.\n"
+        '"""'
     ]
 
-    return correct_content
+
+    return rereview_content
 
 def lines_system_prompt() :
     algorithm_content = [
@@ -221,81 +254,45 @@ def chatbot_system_prompt() -> list:
         {"role": "system", "content": "9. **언어:** 모든 답변은 한국어로 작성하세요."}
     ]
 
-def markdown_system_prompt() :
-    read_content = [
-        "**당신은 사용자가 제공하는 피드백 내용을 가독성 높은 형식으로 변환하는 역할을 합니다.**",
-        
-        "**🚨 중요한 규칙 (절대 어길 수 없음)**\n"
-        "1. **출력 시 `<피드백 제목>`과 `<피드백 내용>`이라는 단어가 포함되어서는 안 됩니다.**\n"
-        "2. **출력 시 `<피드백 제목>`(title) 자체를 포함해서는 안 됩니다.**\n"
-        "3. **오직 가독성 높은 `<피드백 내용>`(content) 부분만 출력해야 합니다.**\n"
-        "4. **마크다운 문법을 적용하여 내용을 더욱 보기 쉽게 정리합니다.**\n"
-        "   - 긴 문단을 의미 단위로 나누어 보기 쉽게 정리합니다.\n"
-        "   - **리스트 (`- 내용`)** 를 사용하여 정보를 나열합니다.\n"
-        "   - 순서가 중요한 경우 **번호 (`1.`, `2.`)** 를 사용합니다.\n"
-        "   - 논리적 구분이 필요한 경우 **소제목** 을 추가합니다.\n"
-        "   - **강조 (`**텍스트**`)** 를 사용하여 핵심 개념을 강조합니다.\n"
-        "   - **코드 블록** 을 사용하여 시간 복잡도 및 알고리즘 설명을 가독성 있게 정리합니다.\n"
-        "   - 적절한 **줄 바꿈** 을 추가하여 내용이 한눈에 들어오도록 합니다.\n",
 
-        "**🔹 변환 예시**\n"
-        "**입력:**\n"
-        "```\n"
-        "<피드백 제목> 이분 탐색을 사용하여 시간 복잡도를 개선해야 합니다.\n"
-        "<피드백 내용> 현재 코드는 숙련도를 최대 난이도부터 차례대로 감소시키면서 제한 시간 내에 퍼즐을 해결할 수 있는지 확인하는 방식으로 수행되고 있습니다. "
-        "이 접근 방식은 최악의 경우 O(max(diffs) * n)의 시간 복잡도를 가지며, diffs의 최대값이 100,000인 상황에서 매우 비효율적일 수 있습니다. "
-        "이를 개선하기 위해 이분 탐색을 사용하여 숙련도의 최솟값을 효율적으로 찾도록 해야 합니다. "
-        "이분 탐색을 적용하면, 숙련도의 범위를 반씩 줄여가며 각 단계에서 제한 시간 내에 퍼즐을 해결할 수 있는지를 확인할 수 있으며, "
-        "이를 통해 시간 복잡도를 O(n log(max(diffs)))로 줄일 수 있습니다. "
-        "이 방식은 숙련도의 중간값을 기준으로 퍼즐 해결 가능 여부를 판단하고, 그 결과에 따라 탐색 범위를 조정하는 방식으로 진행됩니다.\n"
-        "```\n\n",
-
-        "**출력:** (절대 `<피드백 제목>`을 포함하지 말 것!)\n"
-        "```\n"
-        "**🔍 현재 코드의 문제점**\n"
-        "- 숙련도를 최대 난이도부터 감소시키며 퍼즐 해결 가능 여부를 검사하는 방식.\n"
-        "- 최악의 경우 **O(max(diffs) * n)** 의 시간 복잡도를 가짐.\n"
-        "- `diffs`의 최대값이 **100,000**일 때 비효율적.\n\n"
-        "**🚀 해결 방법: 이분 탐색 적용**\n"
-        "1. **이분 탐색을 통해 숙련도의 최솟값을 찾음**  \n"
-        "   - 숙련도의 중간값을 기준으로 퍼즐 해결 가능 여부를 판단.  \n"
-        "   - 결과에 따라 탐색 범위를 조정하여 최적의 숙련도를 찾음.\n\n"
-        "2. **시간 복잡도 개선**  \n"
-        "   - 기존 방식: **O(max(diffs) * n)**  \n"
-        "   - 이분 탐색 적용 후: **O(n log(max(diffs)))**  \n"
-        "   - 탐색 범위를 반씩 줄여 더 빠르게 결과 도출 가능.\n\n"
-        "**✅ 기대 효과**\n"
-        "- 기존 방식 대비 **더 빠른 연산 속도**.\n"
-        "- `max(diffs)`가 큰 경우에도 **효율적으로 동작**.\n"
-        "```"
-    ]
-
-    return read_content
-
-def sucess_lines_prompt() :
+def success_lines_prompt():
     success_prompt = [
-        "당신의 역할은 주어진 코드(`index_code`)가 <피드백 제목>과 <피드백 내용>에서 제시된 요구 사항을 성공적으로 해결한 부분이 어디인지 찾아내는 것입니다.",
+        "당신의 역할은 주어진 코드(`index_code`)에서 <피드백 제목>과 <피드백 내용>이 반영된 줄 번호 범위를 정확히 찾는 것입니다.",
         "코드는 이미 `generate_index_code(source_code)`를 사용하여 `index_code`로 변환되었으며, 줄 번호와 코드가 함께 포함되어 있습니다.",
-        "당신은 `index_code`를 분석하여 해당 피드백이 반영된 정확한 줄 번호 범위를 찾아야 합니다.",
-        "출력은 반드시 지정된 형식으로 이루어져야 하며, 형식에서 벗어난 출력은 허용되지 않습니다.",
-        "피드백이 반영된 부분을 찾을 때, 해당 변경이 정확히 어떤 코드에서 이루어졌는지를 분석하여 줄 번호를 결정해야 합니다.",
-        "출력 시 <피드백 제목>과 <피드백 내용>을 그대로 사용하며, 내용을 요약하거나 재구성하지 않습니다.",
-        "출력 형식은 다음과 같다",
+        "당신은 `index_code`를 분석하여 해당 피드백이 실제로 적용된 줄을 찾아야 합니다.",
+        "출력 시 <피드백 제목>과 <피드백 내용>을 그대로 사용하며, 내용을 수정하거나 요약하지 않습니다.",
+
+        "## ✅ 줄 번호 찾기 규칙:",
+        "1. **피드백이 적용된 첫 번째 줄과 마지막 줄을 정확하게 찾아야 합니다.**",
+        "2. **피드백이 적용된 코드가 함수(`def`), 반복문(`for`, `while`), 조건문(`if`) 등 블록 단위라면, 블록 전체를 포함해야 합니다.**",
+        "3. **불필요한 코드(주석, 단순 변수 선언 등)는 포함하지 않습니다.**",
+        "4. **피드백의 핵심 변경 사항이 포함된 코드 줄만 선택해야 합니다.**",
+        "5. **반복문이나 조건문이 포함된 경우, 해당 블록이 끝나는 줄까지 포함해야 합니다.**",
+        "6. **여러 가능성이 있는 경우, 가장 핵심적인 하나만 선택해야 합니다.**",
+
+        "## ✅ 출력 형식:",
+        "출력은 반드시 다음 형식을 따라야 합니다.",
+
         """
-    <title> 피드백 제목 </title>
-    (시작 줄, 끝 줄) 피드백 내용
+    <title> "<피드백 제목>" </title>
+    (시작 줄, 끝 줄)
         """,
-        "출력 예시는 다음과 같다",
+
+        "출력 예시는 다음과 같습니다.",
+
         """
-    <title> 이분 탐색 최적화 </title>
-    (17, 25) 기존에는 이분 탐색의 범위 설정이 비효율적이었으나, 최적의 mid 값을 조정하는 로직이 개선되어 더 정확한 결과를 도출할 수 있습니다.
+    <title> "이분 탐색 최적화" </title>
+    (17, 25)
         """,
-        "줄 번호(`시작 줄, 끝 줄`)는 반드시 `index_code`에서 피드백이 반영된 부분의 첫 번째 줄과 마지막 줄을 정확하게 찾아야 합니다.",
-        "단순히 `코드가 개선되었습니다.`라고 하지 말고, 어떤 점이 개선되었는지를 명확하게 설명해야 합니다.",
-        "출력 결과는 한 줄 공백 없이 연속된 형식으로 제공되어야 합니다.",
+
+        "## ✅ 유의 사항:",
+        "- 반드시 하나의 (시작 줄, 끝 줄)만 포함해야 합니다.",
+        "- 시작 줄과 끝 줄은 `index_code`에서 피드백이 반영된 부분을 기준으로 정확하게 선택해야 합니다.",
+        "- **<피드백 제목>과 <피드백 내용>을 그대로 유지해야 합니다.**",
+        "- **줄 번호를 찾는 것이 핵심 목표이며, 코드 설명이나 개선 방법을 추가하지 않습니다.**"
     ]
-    
     return success_prompt
+
 
     
 ########################parse,re_Final_function#############################################
@@ -334,51 +331,24 @@ def process_rentest_list(rentest_list):
 
 def update_total_list_from_pem_list(pem_list, total_list):
     """
-    tem_list에 있는 정보를 추출하여 total_list에 반영하는 함수.
-    같은 title이 있으면 new_content와 (new_start_line, new_end_line)을 업데이트함.
+    pem_list에서 (title, new_start_line, new_end_line)을 추출하여 total_list에 반영하는 함수.
+    같은 title이 있으면 기존 content와 status를 유지하면서, (new_start_line, new_end_line)만 업데이트.
     """
+
+    # pem_list 순회하며 title, 시작 줄, 끝 줄 추출
     for response in pem_list:
-        # 정규식을 사용하여 title, (new_start_line, new_end_line), new_content 추출
-        match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)\s*(.*)', response, re.DOTALL | re.MULTILINE)
+        match = re.search(r'<title>\s*"?([^"]*?)"?\s*</title>\s*\((\d+),\s*(\d+)\)', response, re.DOTALL | re.MULTILINE)
 
         if match:
-            title = match.group(1).strip()
-            new_start_line = int(match.group(2))
-            new_end_line = int(match.group(3))
-            new_content = match.group(4).strip()
+            title = match.group(1).strip()  # 피드백 제목 추출 (큰따옴표 제거)
+            new_start_line = int(match.group(2))  # 새로운 시작 줄
+            new_end_line = int(match.group(3))  # 새로운 끝 줄
 
-            # total_list 업데이트
-            for i, item in enumerate(total_list):
-                existing_title, existing_content, start_line, end_line, status = item
-
-                if existing_title == title:
-                    # 같은 title이 있으면 업데이트
-                    total_list[i] = [title, new_content, new_start_line, new_end_line, status]
-                    break  # 한 번 업데이트하면 루프 종료
-
-    return total_list
-
-def update_total_list_from_tem_list(tem_list, total_list):
-    """
-    tem_list에 있는 정보를 추출하여 total_list에 반영하는 함수.
-    같은 title이 있으면 new_content와 (new_start_line, new_end_line)을 업데이트함.
-    """
-    for response in tem_list:
-        # 정규식을 사용하여 title, (new_start_line, new_end_line), new_content 추출
-        match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)', response, re.DOTALL | re.MULTILINE)
-
-        if match:
-            title = match.group(1).strip()
-            new_start_line = int(match.group(2))
-            new_end_line = int(match.group(3))
-
-            # total_list 업데이트
-            for i, item in enumerate(total_list):
-                existing_title, existing_content, start_line, end_line, status = item
-
-                if existing_title == title:
-                    # 같은 title이 있으면 업데이트
-                    total_list[i] = [title, existing_content, new_start_line, new_end_line, status]
+            # total_list에서 해당 title 찾기 (큰따옴표 제거)
+            for i, (existing_title, existing_content, start_line, end_line, status) in enumerate(total_list):
+                if existing_title.strip('"') == title:  # 큰따옴표 유무 고려하여 비교
+                    # 같은 title이 있으면 줄 번호만 업데이트
+                    total_list[i] = [existing_title, existing_content, new_start_line, new_end_line, status]
                     break  # 한 번 업데이트하면 루프 종료
 
     return total_list
@@ -482,9 +452,11 @@ def generate_re_review(prob,source_code,reviews) :
     # previous_feedback = f'"""\n{json.dumps(previous_list, indent=4, ensure_ascii=False)}\n"""'
     rentest_list = list()
 
+    index_code = generate_index_code(source_code)
+
     re_review_content = re_review_system_prompt()
     for title, content in previous_list : 
-        user_input2 = f"<문제 설명> {prob}\n<풀이 코드> {source_code}\n<피드백 제목>{title}\n<피드백 내용>{content}"
+        user_input2 = f"<문제 설명> {prob}</문제 설명>\n<풀이 코드> {index_code}</풀이 코드>\n<피드백 제목>{title}</피드백 제목>\n<피드백 내용>{content}</피드백 내용>"
         response = chat_with_gpt(user_input2,re_review_content)
         new_content, new_status = description_sc(response)
         rentest_list.append([title,new_content,new_status])
@@ -493,7 +465,7 @@ def generate_re_review(prob,source_code,reviews) :
 
     tem_list = list()
     line_content = lines_system_prompt()
-    index_code = generate_index_code(source_code)
+    
     caution = """
     ✅ 주의 사항:
         - 반드시 하나의 (시작 줄, 끝 줄) 개선 사항만 출력해야 합니다.
@@ -507,49 +479,18 @@ def generate_re_review(prob,source_code,reviews) :
 
     ## 성공한 피드백
     pem_list = list()
-    sucess_prompt = sucess_lines_prompt()
+    sucess_prompt = success_lines_prompt()
     for i in range(len(pass_list)) : 
-        user_input5 = "<피드백 제목>"+ pass_list[i][0] + "\n"+ "<피드백 내용>" + pass_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + index_code + "\n" + caution
+        user_input5 = "<피드백 제목>"+ pass_list[i][0] + "</피드백 제목>" +"\n"+ "<피드백 내용>" + pass_list[i][1] + "</피드백 내용>" + "\n" + "<문제설명>" + prob + "</문제설명>" + "\n" + "<풀이코드>" + index_code + "</풀이코드>" +"\n" + caution
         response = chat2_with_gpt(user_input5, sucess_prompt)
         pem_list.append(response)
     
-    medium_list = update_total_list_from_tem_list(tem_list, total_list)
+    medium_list = update_total_list_from_pem_list(tem_list, total_list)
     final_list = update_total_list_from_pem_list(pem_list, medium_list)
 
     updated_final_list = convert_status_to_boolean(final_list)
     final_list.clear()
     final_list = updated_final_list
-
-    temp_list = [[title, content] for title, content, _, _, _ in final_list]
-
-    markdown_prompt = markdown_system_prompt()
-    contest_list = list()
-    for title,content in temp_list :
-        user_mark = f"<피드백 제목>{title} \n<피드백 내용>{content}"
-        response = chat2_with_gpt(user_mark,markdown_prompt)
-        contest_list.append([title,response])
-    temp_list.clear()
-
-        # 정제된 contest_list를 저장할 리스트
-    cleaned_contest_list = []
-
-    # content를 마크다운이 적용된 형태로 정제
-    for title, content in contest_list:
-        cleaned_content = content.replace("```", "").strip()  # 불필요한 ``` 제거
-        cleaned_content = re.sub(r"</?content>", "", cleaned_content).strip()  # <content> 태그 제거
-        cleaned_contest_list.append([title, cleaned_content])  # 새로운 리스트에 저장
-
-    contest_list.clear()
-    contest_list = cleaned_contest_list
-
-    # content_list를 딕셔너리로 변환 (title -> good_content)
-    content_dict = {title: good_content for title, good_content in contest_list}
-
-    # final_list 업데이트
-    for item in final_list:
-        title = item[0]  # 현재 title
-        if title in content_dict:  # 정제된 content가 존재하는 경우
-            item[1] = content_dict[title]  # content 업데이트
 
     return final_list if final_list else []
 
