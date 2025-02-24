@@ -8,7 +8,6 @@ from django.conf import settings
 
 # settings.py에서 API 키 불러오기
 OPENAI_API_KEY = settings.OPENAI_API_KEY
-GENAI_API_KEY = settings.GENAI_API_KEY
 
 client = openai.Client(api_key=OPENAI_API_KEY)
 

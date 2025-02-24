@@ -6,9 +6,10 @@ import os
 import json
 from PIL import Image, UnidentifiedImageError
 import io
+from django.conf import settings
 
 MAX_TRIES = 3    # MAX Request problem info
-API_KEY = os.getenv("GENAI_API_KEY")    # 환경변수 불러오기
+GENAI_API_KEY = settings.GENAI_API_KEY
 
 def get_the_url(url) :
     if 'programmers' in url :
@@ -102,7 +103,7 @@ class NotSupportSite(Exception) :
 
 def fetch_problem_from_image(image):
     """AI 모델을 호출하여 이미지에서 문제 정보를 생성하는 함수"""
-    genai.configure(api_key=API_KEY)
+    genai.configure(api_key=GENAI_API_KEY)
     model = genai.GenerativeModel("gemini-2.0-flash-lite-preview-02-05")
 
     response = model.generate_content([
@@ -119,7 +120,7 @@ def fetch_problem_from_image(image):
 
 def get_info_img(image_bytes):
     """이미지에서 문제 정보를 분석하고 추출하는 함수"""
-    if not API_KEY:
+    if not GENAI_API_KEY:
         return ProblemResponse(description="Missing API Key").to_dict()
 
     try:
