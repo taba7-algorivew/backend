@@ -130,58 +130,49 @@ def re_review_system_prompt() :
 
 def lines_system_prompt() :
     algorithm_content = [
-        "유저가 제공한 코드(<풀이코드>)에서 특정 부분을 개선할 수 있도록, 피드백 제목과 피드백 내용을 바탕으로 해당 코드의 시작 줄과 끝 줄을 찾아야 합니다.",
+        "유저가 제공한 코드(<usercode>)에서 특정 부분을 찾을 수 있도록, <feedback_title>과 <feedback_content>을 바탕으로 해당 코드의 시작 줄과 끝 줄을 찾아야 합니다.",
         "시작 줄과 끝 줄은 반드시 명확한 숫자로 지정되어야 하며, 추정값을 사용해서는 안 됩니다.",
         "시작 줄과 끝 줄은 피드백과 가장 적합한 코드 범위를 포함해야 합니다.",
-        "즉, 피드백 제목과 내용과 관련된 **핵심적인 코드 부분을 포함**해야 하며, 지나치게 짧거나 불완전한 코드 범위를 선택해서는 안 됩니다.",
+        "즉, <feedback_title>과 <feedback_content>과 관련된 **핵심적인 코드 부분을 포함**해야 하며, 지나치게 짧거나 불완전한 코드 범위를 선택해서는 안 됩니다.",
 
         "## ✅ 줄 번호 찾기 규칙:",
         "1. **피드백과 가장 관련성이 높은 코드 줄을 우선적으로 선택해야 합니다.**",
-        "2. **피드백 내용과 가장 적합한 코드 줄을 선택해야 합니다.**",
+        "2. **<feedback_content>과 가장 적합한 코드 줄을 선택해야 합니다.**",
         "   - 코드 블록(반복문, 조건문, 함수 등)과 관련된 경우, **해당 블록이 끝나는 위치까지 포함해야 합니다.**",
         "   - 하나의 코드 줄과만 관련이 있는 경우라도, **연결된 코드가 있다면 블록 단위로 포함해야 합니다.**",
         "3. **주석이나 불필요한 코드 줄은 포함하지 않도록 해야 합니다.**",
-        "4. **코드에서 피드백과 직접적인 연관성이 높은 부분을 우선적으로 선택해야 합니다.**",
-        "5. **조건문(`if`), 반복문(`for`, `while`), 함수(`def`)가 포함된 경우, 해당 블록이 시작되는 줄부터 끝나는 줄까지 포함해야 합니다.**",
-        "6. **특정 조건문이나 연산이 함수 내에서 수행되는 경우, 함수의 주요 로직을 포함해야 합니다.**",
-        "7. **반복문(`while`, `for`) 내부에서 return이 사용되는 경우, 반복문의 종료(return)까지 포함해야 합니다.**",
-        "8. **함수 외부에서 특정 함수를 호출하는 경우, 해당 함수 호출과 결과 처리 로직까지 포함해야 합니다.**",
-        "9. **코드의 핵심 연산이 이루어지는 함수가 있다면, 함수의 시작부터 끝까지 포함해야 합니다.**",
-        "10. **단순한 초기화 부분(변수 선언, 데이터 구조 생성)과 핵심 로직을 구분하여, 필요 이상의 줄을 포함하지 않도록 주의해야 합니다.**",
+        "4. **조건문(`if`), 반복문(`for`, `while`), 함수(`def`)가 포함된 경우, 해당 블록이 시작되는 줄부터 끝나는 줄까지 포함해야 합니다.**",
+        "5. **특정 조건문이나 연산이 함수 내에서 수행되는 경우, 함수의 주요 로직을 포함해야 합니다.**",
+        "6. **반복문(`while`, `for`) 내부에서 return이 사용되는 경우, 반복문의 종료(return)까지 포함해야 합니다.**",
+        "7. **함수 외부에서 특정 함수를 호출하는 경우, 해당 함수 호출과 결과 처리 로직까지 포함해야 합니다.**",
+        "8. **코드의 핵심 연산이 이루어지는 함수가 있다면, 함수의 시작부터 끝까지 포함해야 합니다.**",
+        "9. **단순한 초기화 부분(변수 선언, 데이터 구조 생성)과 핵심 로직을 구분하여, 필요 이상의 줄을 포함하지 않도록 주의해야 합니다.**",
 
         "## ✅ 필수 규칙:",
-        "1. **각 피드백 제목과 피드백 내용에 대해 오직 하나의 (시작 줄, 끝 줄) 개선 사항만 반환해야 합니다.**",
-        "2. **여러 개의 개선 가능 영역이 있을 경우, GPT가 판단하여 가장 핵심적인 한 가지를 선택해야 합니다.**",
+        "1. **<feedback_title>과 <feedback_content>에 대해 오직 하나의 (시작 줄, 끝 줄)만 반환해야 합니다.**",
+        "2. **여러 개의 가능성이 있는 경우, 가장 핵심적인 한 가지를 GPT가 선택해야 합니다.**",
         "   - 코드 성능에 가장 중요한 영향을 미치는 부분을 우선적으로 선택",
-        "   - 피드백 내용과 가장 직접적인 관련이 있는 부분을 우선 선택",
-        "   - 코드의 논리적 흐름을 개선하는 데 가장 중요한 부분을 우선 선택",
-        "3. **선택된 개선 사항만 반환해야 하며, 여러 개의 (시작 줄, 끝 줄)을 포함하면 안 됩니다.**",
+        "   - <feedback_content>과 가장 직접적인 관련이 있는 부분을 우선 선택",
+        "   - 코드의 논리적 흐름과 관련된 가장 중요한 부분을 우선 선택",
+        "3. **여러 개의 (시작 줄, 끝 줄)을 포함하면 안 됩니다.**",
 
         "## ✅ 출력 형식:",
-        "각 피드백 항목은 반드시 다음 형식을 따라야 합니다.",
+        "출력은 반드시 다음 형식을 따라야 합니다.",
 
         """
-        <title> 피드백 제목 </title>
-        (시작 줄, 끝 줄) 상세한 개선 사항
-
-        예시:
-
-        <title>이분 탐색을 활용한 최적화 필요</title>
-        (61, 63) 현재 코드는 모든 가능한 숙련도 값을 1부터 최대 난이도까지 선형 탐색하며 검사하지만, 문제의 범위가 크기 때문에 비효율적입니다. 최적화를 위해 이분 탐색을 적용하여 탐색 범위를 절반씩 줄여가면서 최적의 숙련도를 찾아야 합니다. 중간값을 기준으로 퍼즐 해결 가능 여부를 평가한 후, 숙련도를 조정하는 방식이 더 적합합니다.
+        <title> "<feedback_title>" </title>
+        (시작 줄, 끝 줄) 
         """,
 
-        "## ✅ 개선 사항 작성 규칙:",
-        "- **피드백 제목을 유지하며**, 해당 줄 범위를 어떻게 개선할지를 한 문단으로 설명해야 합니다.",
-        "- **개선 사항은 한 문단으로 작성해야 하며, 불필요한 목록이나 하위 카테고리는 포함하지 않습니다.**",
-        "- **코드 수정 예시는 포함하지 않으며, 오직 개선 방향만 설명합니다.**",
-        "- **'이와 같은 개선을 통해 문제를 더 효율적으로 해결할 수 있습니다.' 같은 마무리 문장을 절대 포함하지 않습니다.**",
-
         "## ✅ 유의 사항:",
-        "- 출력 형식에 맞춰 (시작 줄, 끝 줄)을 정확히 표기해야 합니다.",
+        "- 반드시 하나의 (시작 줄, 끝 줄)만 포함해야 합니다.",
         "- 시작 줄과 끝 줄을 피드백과 가장 적합한 범위로 설정해야 합니다.",
-        "- 반드시 피드백 제목을 유지하고, **개선해야 할 내용을 한 문단으로 상세하게 설명해야 합니다.**",
-        "- **여러 개의 (시작 줄, 끝 줄)을 나열하지 말고, 가장 중요한 하나만 반환해야 합니다.**"
+        "- 피드백 제목은 입력값인 `<feedback_title>`을 그대로 유지해야 합니다.",
+        "- 여러 개의 (시작 줄, 끝 줄)을 나열하지 말고, 가장 중요한 하나만 반환해야 합니다."
     ]
+
+
+
 
     return algorithm_content
 
@@ -319,12 +310,12 @@ def process_rentest_list(rentest_list):
 
     return fail_list, total_list, pass_list
 
-def update_total_list_from_tem_list(tem_list, total_list):
+def update_total_list_from_pem_list(pem_list, total_list):
     """
     tem_list에 있는 정보를 추출하여 total_list에 반영하는 함수.
     같은 title이 있으면 new_content와 (new_start_line, new_end_line)을 업데이트함.
     """
-    for response in tem_list:
+    for response in pem_list:
         # 정규식을 사용하여 title, (new_start_line, new_end_line), new_content 추출
         match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)\s*(.*)', response, re.DOTALL | re.MULTILINE)
 
@@ -337,10 +328,35 @@ def update_total_list_from_tem_list(tem_list, total_list):
             # total_list 업데이트
             for i, item in enumerate(total_list):
                 existing_title, existing_content, start_line, end_line, status = item
-                
+
                 if existing_title == title:
                     # 같은 title이 있으면 업데이트
                     total_list[i] = [title, new_content, new_start_line, new_end_line, status]
+                    break  # 한 번 업데이트하면 루프 종료
+
+    return total_list
+
+def update_total_list_from_tem_list(tem_list, total_list):
+    """
+    tem_list에 있는 정보를 추출하여 total_list에 반영하는 함수.
+    같은 title이 있으면 new_content와 (new_start_line, new_end_line)을 업데이트함.
+    """
+    for response in tem_list:
+        # 정규식을 사용하여 title, (new_start_line, new_end_line), new_content 추출
+        match = re.search(r'<title>(.*?)</title>\s*\((\d+),\s*(\d+)\)', response, re.DOTALL | re.MULTILINE)
+
+        if match:
+            title = match.group(1).strip()
+            new_start_line = int(match.group(2))
+            new_end_line = int(match.group(3))
+
+            # total_list 업데이트
+            for i, item in enumerate(total_list):
+                existing_title, existing_content, start_line, end_line, status = item
+
+                if existing_title == title:
+                    # 같은 title이 있으면 업데이트
+                    total_list[i] = [title, existing_content, new_start_line, new_end_line, status]
                     break  # 한 번 업데이트하면 루프 종료
 
     return total_list
@@ -423,18 +439,21 @@ def generate_review(prob,source_code) :
 """
         
     for title, content in result:
-        user_input3 = f"<피드백 제목> {title}\n<피드백 내용> {content}\n<문제설명> {prob}\n<풀이코드> {index_code}\n <caution> {caution}"
+        user_input3 = f"<feedback_title>{title}</feedback_title>\n<feedback_content> {content}</feedback_content>\n<problem> {prob}</problem>\n<usercode> {index_code}</usercode>\n <caution> {caution}"
         response = chat2_with_gpt(user_input3, line_content)
         maybe_feedback.append(response)
 
+    # 최종 결과를 저장할 리스트
     final_list = []
     temp_list = []
-    for (title, feedback) in zip([t.strip("*") for t, _ in result], maybe_feedback):
-        match = re.search(r"\((\d+),\s*(\d+)\)\s*(.*)", feedback, re.DOTALL)
+
+    # 각 피드백을 순회하며 (시작 줄, 끝 줄) 추출
+    for (title, content), feedback in zip(result, maybe_feedback):
+        match = re.search(r"\((\d+),\s*(\d+)\)", feedback)  # (시작 줄, 끝 줄)만 추출
         if match:
-            start_line, end_line, content = match.groups()
-            temp_list.append([title, content.strip()])
-            final_list.append([title, content.strip(), int(start_line), int(end_line),False])
+            start_line, end_line = match.groups()
+            temp_list.append([title,content])  
+            final_list.append([title, content, int(start_line), int(end_line), False]) 
 
     markdown_prompt = markdown_system_prompt()
     contest_list = list()
@@ -494,7 +513,7 @@ def generate_re_review(prob,source_code,reviews) :
         - 여러 개의 (시작 줄, 끝 줄) 개선 사항을 나열하지 말고, 오직 하나만 출력하세요.
     """
     for i in range(len(fail_list)) :
-        user_input4 = "<피드백 제목>"+fail_list[i][0] + "\n"+ "<피드백 내용>" + fail_list[i][1] + "\n" + "<문제설명>" + prob + "\n" + "<풀이코드>" + index_code + "\n" + "<주의사항>"+ caution
+        user_input4 = "<feedback_title>"+fail_list[i][0] + "</feedback_title>" + "\n"+ "<feedback_content>" + fail_list[i][1] + "</feedback_content>"+ "\n" + "<problem>" + prob + "</problem>" +"\n" + "<usercode>" + index_code +"</usercode>" +"\n" + "<주의사항>"+ caution
         response = chat2_with_gpt(user_input4, line_content)
         tem_list.append(response)
 
@@ -507,7 +526,7 @@ def generate_re_review(prob,source_code,reviews) :
         pem_list.append(response)
     
     medium_list = update_total_list_from_tem_list(tem_list, total_list)
-    final_list = update_total_list_from_tem_list(pem_list, medium_list)
+    final_list = update_total_list_from_pem_list(pem_list, medium_list)
 
     updated_final_list = convert_status_to_boolean(final_list)
     final_list.clear()
