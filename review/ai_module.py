@@ -27,23 +27,25 @@ def review_system_prompt() :
         "   - 논리적 오류, 조건 처리 오류, 엣지 케이스 미처리 등의 문제점을 분석합니다.",
 
         "2. **정답에 가까워질 수 있도록 개선 방향 제공**",
-        "   - <풀이 코드>가 틀렸다면, **어떤 부분이 잘못되었는지 분석하고, 올바르게 수정할 방향을 한 문단으로 설명해야 합니다.**",
+        "   - <풀이 코드>가 틀렸다면, **어떤 부분이 잘못되었는지 분석하고, 올바르게 수정할 방향을 마크다운 형식으로 설명해야 합니다.**",
         "   - 단순히 '오답 발생'이라고 하지 말고, **어떤 개념이 부족한지, 어떤 논리적 오류가 있는지를 구체적으로 서술해야 합니다.**",
+        "   - 문제점과 해결 방법이 직접적으로 연결되도록 작성해야 합니다.",
+        "   - 문제점 설명에는 '잘못된 조건 사용', '불완전한 탐색 방식' 등 핵심적인 알고리즘적 오류를 포함해야 합니다.",
+        "   - 'DFS 탐색 방향 오류' 등 알고리즘의 핵심 개념을 제목에 반영해야 합니다.",
 
         "3. **최적화 필요 시 개선 방향 제공**",
-        "   - 코드가 동작하지만 비효율적이라면, **시간 복잡도 및 공간 복잡도를 고려한 개선 방법을 한 문단으로 제안합니다.**",
+        "   - 코드가 동작하지만 비효율적이라면, **시간 복잡도 및 공간 복잡도를 비교하며 개선 방법을 제안합니다.**",
         "   - 예를 들어, '현재 O(N^2) 복잡도를 가지므로 이진 탐색을 활용하면 O(log N)으로 개선 가능합니다.' 와 같이 작성해야 합니다.",
+        "   - 현재 코드의 시간 복잡도가 O(N^2)이라면, O(N log N)으로 줄일 수 있는 최적화 기법을 명시해야 합니다.",
 
         "4. **가독성 피드백은 필요할 경우에만 제공**",
         "   - 코드가 **정확하지 않다면**, 가독성 피드백은 제공하지 않습니다. (정확성을 먼저 해결해야 함)",
-        "   - 코드가 정확하게 동작하는 경우에만, 변수명 개선, 함수 구조 개선 등의 피드백을 한 문단으로 추가할 수 있습니다.",
+        "   - 코드가 정확하게 동작하는 경우에만, 변수명 개선, 함수 구조 개선 등의 피드백을 마크다운 형식으로 추가할 수 있습니다.",
 
         "5. **피드백 제목과 내용 일관성 유지**",
         "   - `<Content>` 태그에는 반드시 **명확한 피드백 제목**만 포함해야 합니다.",
-        "   - **문장형 표현(예: '시간 복잡도 개선이 필요합니다.') 대신, 간결한 제목(예: '시간 복잡도 문제로 인해 비효율적임')을 사용해야 합니다.**",
-        "   - **예시:**",
-        "     - (잘못된 예) `<Content>시간 복잡도 개선이 필요합니다.</Content>` ❌ (문장형 표현 금지)",
-        "     - (올바른 예) `<Content>시간 복잡도 문제로 인해 비효율적임</Content>` ✅ (제목형 표현)",
+        "   - **문장형 표현(예: '시간 복잡도 개선이 필요합니다.') 대신, 간결한 제목(예: 'DFS 탐색 중복으로 인해 O(N^2) 복잡도 발생')을 사용해야 합니다.**",
+        "   - 피드백 제목에는 **알고리즘적 키워드**(DFS, BFS, DP 등)를 포함하여 문제의 본질을 드러내야 합니다.",
 
         "6. **출력 형식 준수**",
         """
@@ -51,13 +53,32 @@ def review_system_prompt() :
 
         <Review>
         <Content>피드백 제목 (명확한 키워드 사용)</Content>
-        <Detail>코드 리뷰 내용 및 상세 설명 (한 문단으로 작성)</Detail>
+        <Detail>
+        **🔍 현재 코드의 문제점**
+        - [문제점 설명 (논리적 오류, 잘못된 조건, 비효율적인 탐색 방식 등)]
+        
+        **🚀 해결 방법**
+        1. **[해결 방법 요약]**
+        - [구체적인 해결 방법 설명, 변수나 함수명 언급 가능]
+        - [알고리즘 최적화 가능 시, 시간 복잡도 비교 필수]
+
+        **✅ 기대 효과**
+        - [개선 이후 기대되는 효과]
+        </Detail>
 
         <Content>피드백 제목 (명확한 키워드 사용)</Content>
-        <Detail>코드 리뷰 내용 및 상세 설명 (한 문단으로 작성)</Detail>
+        <Detail>
+        **🔍 현재 코드의 문제점**
+        - [문제점 설명]
+        
+        **🚀 해결 방법**
+        1. **[해결 방법 요약]**
+        - [구체적인 해결 방법 설명]
+        - [관련된 변수나 함수명 언급 가능]
 
-        <Content>피드백 제목 (명확한 키워드 사용)</Content>
-        <Detail>코드 리뷰 내용 및 상세 설명 (한 문단으로 작성)</Detail>
+        **✅ 기대 효과**
+        - [개선 이후 기대되는 효과]
+        </Detail>
         </Review>
         """,
 
@@ -66,7 +87,9 @@ def review_system_prompt() :
         "- **'오답 발생' 같은 표현 대신, 'DFS 탐색 방향 오류로 인해 정답을 찾지 못함'처럼 구체적인 내용을 포함해야 합니다.**",
         "- **출력의 마지막에 불필요한 결론 요약(예: '따라서', '결론적으로')을 포함하지 않습니다.**",
         "- **가독성 개선 피드백은 코드가 정답을 도출하는 경우에만 제공하며, 불필요한 가독성 피드백은 금지합니다.**",
-        "- **출력 형식에서 `<Review>` 태그를 최상위 컨테이너로 유지하며, 각각의 코드 리뷰는 `<Content>`와 `<Detail>`을 사용하여 표현해야 합니다.**"
+        "- **출력 형식에서 `<Review>` 태그를 최상위 컨테이너로 유지하며, 각각의 코드 리뷰는 `<Content>`와 `<Detail>`을 사용하여 표현해야 합니다.**",
+        "- **출력 내용에 직접적인 코드 블록(````python ... ````)이 포함되지 않아야 합니다.**",
+        "- **필요한 경우, 변수명 및 함수명을 언급할 수 있으나 코드의 전체 구조를 직접적으로 제공하지 않습니다.**",
     ]
 
     return feedback_content
@@ -422,11 +445,6 @@ def generate_review(prob,source_code) :
     # [[<content>, <detail>], [<content>, <detail>], ...] 형태로 리스트 생성
     result = [[content.strip(), detail.strip()] for content, detail in zip(contents, details)]
 
-    # 각 번호별 내용을 저장할 리스트
-    title_list = []
-
-    title_list = re.findall(r'(?i)<content>(.*?)</content>', content_response, re.DOTALL)
-
     maybe_feedback = []
     line_content = lines_system_prompt()
     index_code = generate_index_code(source_code)
@@ -454,35 +472,6 @@ def generate_review(prob,source_code) :
             start_line, end_line = match.groups()
             temp_list.append([title,content])  
             final_list.append([title, content, int(start_line), int(end_line), False]) 
-
-    markdown_prompt = markdown_system_prompt()
-    contest_list = list()
-    for title,content in temp_list :
-        user_mark = f"<피드백 제목>{title} \n<피드백 내용>{content}"
-        response = chat2_with_gpt(user_mark,markdown_prompt)
-        contest_list.append([title,response])
-    temp_list.clear()
-
-        # 정제된 contest_list를 저장할 리스트
-    cleaned_contest_list = []
-
-    # content를 마크다운이 적용된 형태로 정제
-    for title, content in contest_list:
-        cleaned_content = content.replace("```", "").strip()  # 불필요한 ``` 제거
-        cleaned_content = re.sub(r"</?content>", "", cleaned_content).strip()  # <content> 태그 제거
-        cleaned_contest_list.append([title, cleaned_content])  # 새로운 리스트에 저장
-
-    contest_list.clear()
-    contest_list = cleaned_contest_list
-
-    # content_list를 딕셔너리로 변환 (title -> good_content)
-    content_dict = {title: good_content for title, good_content in contest_list}
-
-    # final_list 업데이트
-    for item in final_list:
-        title = item[0]  # 현재 title
-        if title in content_dict:  # 정제된 content가 존재하는 경우
-            item[1] = content_dict[title]  # content 업데이트
 
     return final_list if final_list else []
 
