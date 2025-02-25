@@ -6,11 +6,4 @@ __pycache__
 Dockerfile
 README.md
 debug.py
-
-# frontend
-node_modules
-build
-.dockerignore
-Dockerfile*
-README.md
-.git
+.github

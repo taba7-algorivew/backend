@@ -1,6 +1,7 @@
 name: CI to ECR
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
@@ -8,29 +9,24 @@ on:
 jobs:
   request-approval:
     runs-on: ubuntu-latest
-    outputs:
-      approved: ${{ steps.approval.outputs.approved }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Request approval
-        id: approval
-        uses: reviewdog/action-wait-approval@v1
+      - name: Wait for approval
+        uses: fjogeleit/http-request-action@v1.14.1
         with:
-          github_token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-          message: "🚀 새로운 커밋이 생성되었습니다. Runner 승인 후 ECR에 이미지를 업로드합니다."
-          approvers: "*"
-          timeout_minutes: 30
-  
+          url: https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approve
+          method: POST
+          headers: |
+            Authorization: Bearer ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+            Accept: application/vnd.github.v3+json
+          timeout: 1800
+
   build-and-push:
     needs: request-approval
-    if: ${{ needs.request-approval.outputs.approved == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
