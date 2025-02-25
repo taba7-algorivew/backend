@@ -153,7 +153,7 @@ def get_info_img(image_base64):
         try:
             problem_data = json.loads(raw_text)
 
-            if all(key in problem_data for key in ["status", "title", "description"]):
+            if all(key in problem_data for key in ["status", "title", "content"]):
                 return problem_data
         except json.JSONDecodeError as e:
             return ProblemResponse(description=f"JSON 디코딩 오류: {e}").to_dict()
