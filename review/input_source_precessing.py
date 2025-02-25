@@ -121,17 +121,18 @@ def fetch_problem_from_image(image):
 
 def get_info_img(image_base64):
     """이미지에서 문제 정보를 분석하고 추출하는 함수"""
+
     if not GENAI_API_KEY:
         return ProblemResponse(description="Missing API Key").to_dict()
-    
+
     if not image_base64:
         return ProblemResponse(description="No image data provided").to_dict()
 
-    # base64 prefix 제거 (data:image/png;base64 ...)
+    # Base64 prefix 제거 (data:image/png;base64 ...)
     if image_base64.startswith("data:image"):
         image_base64 = image_base64.split(",", 1)[1]
 
-    # problem_info 추출 시작
+    # 문제 정보 추출 시작
     try:
         decoded_image = base64.b64decode(image_base64)
         image = Image.open(io.BytesIO(decoded_image))
@@ -141,21 +142,26 @@ def get_info_img(image_base64):
         return ProblemResponse(description="Invalid image").to_dict()
 
     # AI 모델 호출 및 응답 검증
-    for attempt in range(MAX_TRIES):
+    for attempt in range(1, MAX_TRIES + 1):
         raw_text = fetch_problem_from_image(image)
 
         if raw_text is None:
             continue
-        
-        # JSON 파싱 전 코드 블럭 전처리
-        raw_text = raw_text.strip()[7:-3].strip()
 
+        # JSON 파싱 전 마크다운 블록 전처리
+        try:
+            raw_text = raw_text.strip()[7:-3].strip()
+        except Exception:
+            continue
+
+        # JSON 파싱 시도
         try:
             problem_data = json.loads(raw_text)
 
+            # 필수 키 확인
             if all(key in problem_data for key in ["status", "title", "content"]):
                 return problem_data
-        except json.JSONDecodeError as e:
-            return ProblemResponse(description=f"JSON 디코딩 오류: {e}").to_dict()
+        except json.JSONDecodeError:
+            continue
 
     return ProblemResponse(description="Invalid API response after multiple attempts").to_dict()
