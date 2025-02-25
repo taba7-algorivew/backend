@@ -7,6 +7,7 @@ import json
 from PIL import Image, UnidentifiedImageError
 import io
 from django.conf import settings
+import base64
 
 MAX_TRIES = 3    # MAX Request problem info
 GENAI_API_KEY = settings.GENAI_API_KEY
@@ -124,7 +125,8 @@ def get_info_img(image_bytes):
         return ProblemResponse(description="Missing API Key").to_dict()
 
     try:
-        image = Image.open(io.BytesIO(image_bytes))
+        image = base64.b64decode(image_bytes) # base64 디코딩 후
+        image = Image.open(io.BytesIO(image))
     except UnidentifiedImageError:
         return ProblemResponse(description="Invalid image").to_dict()
     except Exception:
