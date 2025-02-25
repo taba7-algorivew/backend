@@ -112,21 +112,29 @@ def fetch_problem_from_image(image):
         "이미지에 있는 문제 정보를 추적해 답변해주세요.",
         "입력 형식, 출력 형식, 예제는 모두 하나의 문제 정보로 취급하세요.",
         "문제 정보를 추출할 때 적절하게 줄바꿈 표기를 해주세요",
-        "항상 다음과 같은 형식으로 JSON으로 출력을 보내주세요: { 'status': True, 'title': '문제 제목', 'description': '문제 설명' }",
+        "항상 다음과 같은 형식으로 JSON으로 출력을 보내주세요: { 'status': True, 'title': '문제 제목', 'content': '문제 설명' }",
         "응답은 한국어로 해야 합니다.",
         image  # 원본 이미지 전달
     ])
 
     return response.text if response.text else None
 
-def get_info_img(image_bytes):
+def get_info_img(image_base64):
     """이미지에서 문제 정보를 분석하고 추출하는 함수"""
     if not GENAI_API_KEY:
         return ProblemResponse(description="Missing API Key").to_dict()
+    
+    if not image_base64:
+        return ProblemResponse(description="No image data provided").to_dict()
 
+    # base64 prefix 제거 (data:image/png;base64 ...)
+    if image_base64.startswith("data:image"):
+        image_base64 = image_base64.split(",", 1)[1]
+
+    # problem_info 추출 시작
     try:
-        image = base64.b64decode(image_bytes) # base64 디코딩 후
-        image = Image.open(io.BytesIO(image))
+        decoded_image = base64.b64decode(image_base64)
+        image = Image.open(io.BytesIO(decoded_image))
     except UnidentifiedImageError:
         return ProblemResponse(description="Invalid image").to_dict()
     except Exception:
@@ -137,14 +145,17 @@ def get_info_img(image_bytes):
         raw_text = fetch_problem_from_image(image)
 
         if raw_text is None:
-            return ProblemResponse(description="API request failed").to_dict()
+            continue
+        
+        # JSON 파싱 전 코드 블럭 전처리
+        raw_text = raw_text.strip()[7:-3].strip()
 
         try:
             problem_data = json.loads(raw_text)
 
             if all(key in problem_data for key in ["status", "title", "description"]):
                 return problem_data
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            return ProblemResponse(description=f"JSON 디코딩 오류: {e}").to_dict()
 
     return ProblemResponse(description="Invalid API response after multiple attempts").to_dict()
